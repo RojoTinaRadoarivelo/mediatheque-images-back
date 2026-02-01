@@ -37,11 +37,22 @@ export class ApiMessageInterceptor implements NestInterceptor {
         }
 
         return next.handle().pipe(
-            map((data) => ({
-                status: 'success',
-                message: messageMap[action],
-                data,
-            })),
+            map((response) => {
+                const httpContext = context.switchToHttp();
+                const res = httpContext.getResponse();
+
+                if (response?.statusCode) {
+                    res.status(response.statusCode);
+                }
+
+
+
+                return {
+                    statusCode: response.statusCode ?? 200,
+                    message: response.message || messageMap[action],
+                    data: response.data || null,
+                };
+            }),
         );
     }
 }

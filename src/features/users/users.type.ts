@@ -1,9 +1,12 @@
 
 // MODEL
 export class Users {
+    id: string;
     email: string;
     password?: string;
     createdAt: Date;
+    avatar: string;
+    userName: string;
 
 }
 

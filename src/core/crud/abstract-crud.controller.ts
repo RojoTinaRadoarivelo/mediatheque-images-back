@@ -13,17 +13,33 @@ export abstract class CrudController<C, U, R> {
 
     @ApiMessage(`create`)
     @Post()
-    create(@Body() data: C) { return this.service.Create(data); }
+    create(@Body() data: C) {
+
+        return this.service.Create(data);
+
+    }
 
     @ApiMessage(`update`)
     @Put(':id')
-    update(@Param('id') id: string, @Body() data: U) { return this.service.Update(id, data); }
+    update(@Param('id') id: string, @Body() data: U) {
+
+        return this.service.Update(id, data);
+
+    }
 
     @ApiMessage(`delete`)
     @Delete(':id')
-    delete(@Param('id') id: string) { return this.service.Delete(id); }
+    delete(@Param('id') id: string) {
+
+        return this.service.Delete(id);
+
+    }
 
     @ApiMessage(`list`)
     @Get()
-    findMany() { return this.service.FindMany(); }
+    findMany() {
+
+        return this.service.FindMany();
+
+    }
 }
