@@ -26,8 +26,9 @@ import { UsersModule } from './features/users/users.module';
       useFactory: (config: ConfigService) => ({
         throttlers: [
           {
-            ttl: config.get<number>('TTL', 60),
-            limit: config.get<number>('LIMIT', 10),
+            ttl: config.get<number>('ttl', 1000),
+            limit: config.get<number>('limit', 5),
+            blockDuration: config.get<number>('ttl')
           },
         ],
       }),
