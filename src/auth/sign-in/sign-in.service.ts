@@ -14,6 +14,7 @@ import { DEFAULT_ERROR_MSG, USER_ERROR_MESSAGE } from '../interfaces/error-messa
 import { refreshConfig } from '../../core/configs/config';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { assertSingle } from '../../utils/interfaces/assert-single.utils';
+import { HashPassword } from '../../utils/interfaces/pwd-encryption';
 
 @Injectable()
 export class SignInService {
@@ -31,6 +32,9 @@ export class SignInService {
   async SignIn(data: SignInDto): Promise<reponsesDTO<{ c_id: any; sess_id: any }>> {
     let response: reponsesDTO<{ c_id: any; sess_id: any }>;
     try {
+      const hashedPassword = await HashPassword(data.password, 10);
+      data.password = hashedPassword;
+
       const searchUser: IResponse<Users | null> = await this._userService.FindOne(
         {
           email: data.email,

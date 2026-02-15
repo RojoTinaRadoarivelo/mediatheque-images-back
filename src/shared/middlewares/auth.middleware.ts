@@ -7,7 +7,7 @@ import { FilterUsersOutputDto } from '../../features/users/users.type';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(private readonly _findOneUserService: UsersService) { }
+  constructor(private readonly _userService: UsersService) { }
   async use(req: any, res: any, next: () => void): Promise<void> {
     const authCookie = req.cookies['accessToken'];
 
@@ -26,7 +26,13 @@ export class AuthMiddleware implements NestMiddleware {
       }
 
       const user_id = decoded.sub;
-      const user = await this.findUser(user_id);
+      let user: any;
+      if (user_id) {
+        user = await this.findUser(user_id, null);
+      } else {
+        user = await this.findUser(null, { email: decoded.mail });
+      }
+
 
       if (user?.data && typeof FilterUsersOutputDto == typeof user.data) {
         req.user = user.data;
@@ -39,7 +45,7 @@ export class AuthMiddleware implements NestMiddleware {
     }
     next();
   }
-  private async findUser(id: string): Promise<any> {
-    return await this._findOneUserService.FindOne({ id });
+  private async findUser(id: string | null, query: any): Promise<any> {
+    return await this._userService.FindOne(query ?? { id });
   }
 }
