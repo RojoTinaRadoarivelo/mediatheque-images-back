@@ -14,6 +14,7 @@ import { DEFAULT_ERROR_MSG, USER_ERROR_MESSAGE } from '../interfaces/error-messa
 import { refreshConfig } from '../../core/configs/config';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { assertSingle } from '../../utils/interfaces/assert-single.utils';
+import { ComparePasswords } from '../../utils/interfaces/pwd-encryption';
 
 @Injectable()
 export class SignInService {
@@ -34,7 +35,15 @@ export class SignInService {
       const searchUser: IResponse<Users | null> = await this._userService.FindOne(
         {
           email: data.email,
-          password: data.password,
+        },
+        {
+          id: true,
+          email: true,
+          userName: true,
+          password: true,
+          avatar: true,
+          createdAt: true,
+          updatedAt: true
         }
       );
 
@@ -49,6 +58,15 @@ export class SignInService {
       }
 
       if (user) {
+        const isMatch = await ComparePasswords(
+          data.password,
+          user?.password!
+        );
+
+        if (!isMatch) {
+          throw new BadRequestException("Invalid credentials");
+        }
+
         const userPresenter: AuthUserPresenter = new AuthUserPresenter();
         const dataResponse = userPresenter.present(user);
 
