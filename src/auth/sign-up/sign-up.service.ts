@@ -34,8 +34,9 @@ export class SignUpService {
     try {
       const hashedPassword = await HashPassword(data.password, 10);
       data.password = hashedPassword;
+      const userName: string = data.email.split("@")[0];
 
-      const newUser: IResponse<Users | null> = await this._userService.Create(data);
+      const newUser: IResponse<Users | null> = await this._userService.Create({ ...data, userName });
       let user: Users | null;
       if (newUser) {
         user = assertSingle(
