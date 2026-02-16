@@ -24,6 +24,10 @@ export class CreateUserDto {
     @IsOptional()
     @IsString({ message: ErrorMessages.INVALID_TYPE })
     userName?: string;
+
+    @IsOptional()
+    @IsString({ message: ErrorMessages.INVALID_TYPE })
+    avatar?: string;
 }
 
 

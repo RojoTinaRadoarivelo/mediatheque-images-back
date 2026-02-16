@@ -20,8 +20,16 @@ export abstract class CrudController<C, U, R> {
     @Post()
     async create(@Body() data: C) {
         const dtoClass = this.getCreateDto();
-        const validated = await new GenericDtoValidatorPipe(dtoClass, ['create']).transform(data, { type: 'body' } as any);
+        const validated = await new GenericDtoValidatorPipe(dtoClass).transform(data, { type: 'body' } as any);
         return this.service.Create(validated as C);
+
+    }
+
+    @ApiMessage(`bin`)
+    @Put('moveToBin/:id')
+    moveToBin(@Param('id') id: string) {
+
+        return this.service.MoveToBin(id);
 
     }
 
@@ -29,7 +37,7 @@ export abstract class CrudController<C, U, R> {
     @Put(':id')
     async update(@Param('id') id: string, @Body() data: U) {
         const dtoClass = this.getUpdateDto();
-        const validated = await new GenericDtoValidatorPipe(dtoClass, ['update']).transform(data, { type: 'body' } as any);
+        const validated = await new GenericDtoValidatorPipe(dtoClass).transform(data, { type: 'body' } as any);
         return this.service.Update(id, validated as U);
 
     }
@@ -39,6 +47,14 @@ export abstract class CrudController<C, U, R> {
     delete(@Param('id') id: string) {
 
         return this.service.Delete(id);
+
+    }
+
+    @ApiMessage(`search`)
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+
+        return this.service.FindOne({ id });
 
     }
 
