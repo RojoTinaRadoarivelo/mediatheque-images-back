@@ -13,6 +13,14 @@ import { SignedUserDto } from '../../auth/interfaces/dtos/signed-user.dto';
 @Controller('users')
 export class UsersController extends CrudController<CreateUserDto, UpdateUserDto, Users> {
   constructor(service: UsersService) { super(service); }
+  protected getCreateDto() {
+    return CreateUserDto;
+  }
+
+  protected getUpdateDto() {
+    return UpdateUserDto;
+  }
+
   // 🔥 Nouvelle route spécifique @Get('active') findActiveUsers() { return []; } } 
 
   @Get('info')

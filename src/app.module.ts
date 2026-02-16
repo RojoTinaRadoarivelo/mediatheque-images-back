@@ -11,6 +11,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CONFIG } from './core/configs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './features/users/users.module';
+import { TagsModule } from './features/tags/tags.module';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { UsersModule } from './features/users/users.module';
       }),
     }),
     AuthModule,
-    UsersModule
+    UsersModule,
+    TagsModule
   ],
   controllers: [AppController],
   providers: [

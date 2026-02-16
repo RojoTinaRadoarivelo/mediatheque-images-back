@@ -13,7 +13,7 @@ export class SignUpController {
   constructor(private readonly _signUpService: SignUpService) { }
 
   @Post('sign-up')
-  @UsePipes(new GenericDtoValidatorPipe<SignUpDto>())
+  @UsePipes(new GenericDtoValidatorPipe(SignUpDto))
   async SignUp(
     @Body() data: SignUpDto,
     @Res() res: Response,

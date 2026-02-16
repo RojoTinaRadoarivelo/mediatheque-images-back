@@ -12,7 +12,7 @@ import { reponsesDTO } from '../../utils/interfaces/responses';
 export class MfaController {
   constructor(private readonly _mfaService: MfaService) { }
   @Post('send-verification-code')
-  @UsePipes(new GenericDtoValidatorPipe<SendVerificationCodeDto>())
+  @UsePipes(new GenericDtoValidatorPipe(SendVerificationCodeDto))
   async SendVerification(
     @Body() data: SendVerificationCodeDto,
   ): Promise<reponsesDTO<object | null>> {
@@ -26,7 +26,7 @@ export class MfaController {
     return response;
   }
   @Post('verify-code')
-  @UsePipes(new GenericDtoValidatorPipe<VerificationCodeDto>())
+  @UsePipes(new GenericDtoValidatorPipe(VerificationCodeDto))
   async VerifyCode(@Body() data: VerificationCodeDto): Promise<reponsesDTO<object | null>> {
     const sendmailVerification = await this._mfaService.verifyCode(data.email, data.code);
 

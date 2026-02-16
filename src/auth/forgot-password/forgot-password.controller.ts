@@ -13,7 +13,7 @@ export class ForgotPasswordController {
   constructor(private readonly _forgotPasswordService: ForgotPasswordService) { }
 
   @Post('forgot-password')
-  @UsePipes(new GenericDtoValidatorPipe<ForgotPasswordDto>())
+  @UsePipes(new GenericDtoValidatorPipe(ForgotPasswordDto))
   async ForgotPassword(
     @Body() data: ForgotPasswordDto,
     @Res() res: Response,
