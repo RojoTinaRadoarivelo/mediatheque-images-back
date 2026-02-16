@@ -15,7 +15,7 @@ export class SignInController {
   constructor(private readonly _signInService: SignInService) { }
 
   @Post('sign-in')
-  @UsePipes(new GenericDtoValidatorPipe<SignInDto>())
+  @UsePipes(new GenericDtoValidatorPipe(SignInDto))
   async SignIn(
     @Body() data: SignInDto,
     @Res() res: Response,
