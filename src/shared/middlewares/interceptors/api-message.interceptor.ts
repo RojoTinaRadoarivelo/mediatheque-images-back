@@ -33,7 +33,8 @@ export class ApiMessageInterceptor implements NestInterceptor {
             createMany: `${controllerName} were created successfully`,
             updateMany: `${controllerName} were updated successfully`,
             deleteMany: `${controllerName} were deleted successfully`,
-            search: `List of ${controllerName} for the query`
+            search: `List of ${controllerName} for the query`,
+            bin: `${controllerName} was moved to bin successfully`
         }
 
         return next.handle().pipe(

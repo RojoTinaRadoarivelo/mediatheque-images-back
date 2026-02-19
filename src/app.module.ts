@@ -12,6 +12,7 @@ import { CONFIG } from './core/configs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './features/users/users.module';
 import { TagsModule } from './features/tags/tags.module';
+import { GalleryModule } from './features/gallery/gallery.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { TagsModule } from './features/tags/tags.module';
     }),
     AuthModule,
     UsersModule,
-    TagsModule
+    TagsModule,
+    GalleryModule
   ],
   controllers: [AppController],
   providers: [
