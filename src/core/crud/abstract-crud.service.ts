@@ -59,4 +59,8 @@ export abstract class CrudService<C, U, R> implements ICrudService<C, U, R> {
         const includeParams = this.deleteIncludeParams ?? this.includeParams;
         return await this.repository.MoveToBin(id, includeParams, query);
     }
+    async RestoreFromBinPhoto(id: string | null, query?: any): Promise<IResponse<R | null>> {
+        const includeParams = this.listFilterIncludeParams ?? this.includeParams;
+        return await this.repository.RestoreFromBinPhoto(id, includeParams, query);
+    }
 } 

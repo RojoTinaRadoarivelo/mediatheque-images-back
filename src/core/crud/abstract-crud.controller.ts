@@ -33,6 +33,14 @@ export abstract class CrudController<C, U, R> {
 
     }
 
+    @ApiMessage(`bin`)
+    @Put('restoreFromBin/:id')
+    restoreFromBin(@Param('id') id: string) {
+
+        return this.service.RestoreFromBinPhoto(id);
+
+    }
+
     @ApiMessage(`update`)
     @Put(':id')
     async update(@Param('id') id: string, @Body() data: U) {

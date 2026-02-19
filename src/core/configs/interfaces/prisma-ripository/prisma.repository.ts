@@ -371,4 +371,43 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
             return response;
         }
     }
+
+    async RestoreFromBinPhoto(id: string | null, returnObjectParams: any, query?: any): Promise<IResponse<R | null>> {
+        let response: IResponse<R | null>;
+        try {
+            if (id == null) {
+                const responseData = await this.prismaModel.update({ where: query, data: { isDeleted: false }, select: returnObjectParams });
+                if (!responseData) {
+                    throw new BadRequestException('There was an error restoring the data frmo bin!');
+                }
+                response = {
+                    statusCode: HttpStatus.CREATED,
+                    data: responseData,
+                };
+                return response;
+            }
+            const responseData = await this.prismaModel.update({ where: { id }, data: { isDeleted: false }, select: returnObjectParams });
+            if (!responseData) {
+                throw new BadRequestException('There was an error restoring the data frmo bin!');
+            }
+            response = {
+                statusCode: HttpStatus.CREATED,
+                data: responseData,
+            };
+            return response;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                response = {
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: error.message,
+                };
+            } else {
+                response = {
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: error.message,
+                };
+            }
+            return response;
+        }
+    }
 } 
