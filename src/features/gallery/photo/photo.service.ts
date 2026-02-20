@@ -50,9 +50,11 @@ export class PhotoService {
     async getFilteredPhotos(query: any) {
         let response: IResponse<Photos[]>;
         try {
+            const { name, ...rest } = query;
+            const ifCondition = name != undefined ? { name: { contains: name, mode: "insensitive" } } : { ...rest };
             const responseData = await this.photosPrisma.findMany({
                 where: {
-                    ...query,
+                    ...ifCondition,
                     isDeleted: false,
                 },
                 select: this.selectFields,

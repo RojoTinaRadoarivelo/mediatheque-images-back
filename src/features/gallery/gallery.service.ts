@@ -57,7 +57,30 @@ export class GalleryService {
     }
 
     async getFilteredPhoto(query: any) {
-        return await this._photoService.getFilteredPhotos(query);
+        if (query.name) {
+            return await this._photoService.getFilteredPhotos(query);
+        } else {
+            const { tagNames, userName } = query;
+            const userNameCondition = userName != undefined ? {
+                user: {
+                    userName,
+                    mode: "insensitive"
+                }
+            } : undefined;
+            const tagsConditions = tagNames != undefined ? {
+                tag: {
+                    name: { in: tagNames, mode: "insensitive" }
+                }
+            } : undefined;
+            const orCondition = { OR: [userNameCondition, tagsConditions] };
+            const photoFiltered = await this.galleryPrisma.findMany({
+                where: {
+                    orCondition
+                },
+                select: this.selectFields
+            });
+            return photoFiltered;
+        }
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
