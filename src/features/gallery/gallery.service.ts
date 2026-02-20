@@ -58,7 +58,7 @@ export class GalleryService {
     }
 
     async getFilteredPhoto(query: any) {
-        const { name, tagNames, userName, userId } = query;
+        const { name, tagNames, userName, userId, isAuthentified } = query;
         const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
         const userNameCondition = userName != undefined ? {
             user: {
@@ -75,9 +75,10 @@ export class GalleryService {
             }
         } : undefined;
         const orCondition = { OR: [photoName, userIdCondition, userNameCondition, tagsConditions] };
+        const searchCondition = isAuthentified ? { AND: [userIdCondition, orCondition] } : orCondition;
         const photoFiltered = await this.galleryPrisma.findMany({
             where: {
-                orCondition
+                searchCondition
             },
             select: this.selectFields
         });
