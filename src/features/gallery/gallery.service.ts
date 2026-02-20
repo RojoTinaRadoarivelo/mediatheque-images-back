@@ -58,7 +58,14 @@ export class GalleryService {
 
     async getFilteredPhoto(query: any) {
         if (query.name) {
-            return await this._photoService.getFilteredPhotos(query);
+            const photos = await this._photoService.getFilteredPhotos(query);
+            const photoFiltered = await this.galleryPrisma.findMany({
+                where: {
+                    photo_id: { in: (photos.data as any[]).map((el) => el.id) }
+                },
+                select: this.selectFields
+            });
+            return photoFiltered;
         } else {
             const { tagNames, userName } = query;
             const userNameCondition = userName != undefined ? {
