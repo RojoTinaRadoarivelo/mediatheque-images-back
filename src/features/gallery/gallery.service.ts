@@ -1,12 +1,11 @@
 import { BadRequestException, ConflictException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { IPrismaService } from '../../core/configs/interfaces/prisma-ripository/prisma.service';
 import { PhotoService } from './photo/photo.service';
-import { TagsService } from '../tags/tags.service';
 import { CreateGalleryDto, UpdateGalleryDto } from './DTOs/gallery.dto';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { Photos } from './photo/photos.type';
 import { assertSingle } from '../../utils/interfaces/assert-single.utils';
-import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE, USER_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
+import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
 import { Galleries } from './gallery.type';
 
 @Injectable()
@@ -45,49 +44,44 @@ export class GalleryService {
 
     constructor(
         private readonly _dbService: IPrismaService,
-        private readonly _photoService: PhotoService,
-        private readonly _tagsService: TagsService
+        private readonly _photoService: PhotoService
     ) {
         this.galleryPrisma = _dbService.prisma.taggedPhoto;
         this.photoPrisma = _dbService.prisma.photos;
     }
 
     async getAllPhoto() {
-        return await this._photoService.getAllPhoto();
+        const photoFiltered = await this.galleryPrisma.findMany({
+            select: this.selectFields
+        });
+        return photoFiltered;
     }
 
     async getFilteredPhoto(query: any) {
-        if (query.name) {
-            const photos = await this._photoService.getFilteredPhotos(query);
-            const photoFiltered = await this.galleryPrisma.findMany({
-                where: {
-                    photo_id: { in: (photos.data as any[]).map((el) => el.id) }
-                },
-                select: this.selectFields
-            });
-            return photoFiltered;
-        } else {
-            const { tagNames, userName } = query;
-            const userNameCondition = userName != undefined ? {
-                user: {
-                    userName,
-                    mode: "insensitive"
-                }
-            } : undefined;
-            const tagsConditions = tagNames != undefined ? {
-                tag: {
-                    name: { in: tagNames, mode: "insensitive" }
-                }
-            } : undefined;
-            const orCondition = { OR: [userNameCondition, tagsConditions] };
-            const photoFiltered = await this.galleryPrisma.findMany({
-                where: {
-                    orCondition
-                },
-                select: this.selectFields
-            });
-            return photoFiltered;
-        }
+        const { name, tagNames, userName, userId } = query;
+        const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
+        const userNameCondition = userName != undefined ? {
+            user: {
+                userName,
+                mode: "insensitive"
+            }
+        } : undefined;
+        const userIdCondition = userId != undefined ? {
+            user_id: userId
+        } : undefined;
+        const tagsConditions = tagNames != undefined ? {
+            tag: {
+                name: { in: tagNames, mode: "insensitive" }
+            }
+        } : undefined;
+        const orCondition = { OR: [photoName, userIdCondition, userNameCondition, tagsConditions] };
+        const photoFiltered = await this.galleryPrisma.findMany({
+            where: {
+                orCondition
+            },
+            select: this.selectFields
+        });
+        return photoFiltered;
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
