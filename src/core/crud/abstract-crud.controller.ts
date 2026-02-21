@@ -76,7 +76,7 @@ export abstract class CrudController<C, U, R> {
 
     @ApiMessage(`list`)
     @Get()
-    findMany(@Query('page') page = 1, @Query('limit') limit = 12) {
+    findMany(@Query('page') page: number, @Query('limit') limit: number = 12) {
 
         return this.service.FindMany(+page, +limit);
 
