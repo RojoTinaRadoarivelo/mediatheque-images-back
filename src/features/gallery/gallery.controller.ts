@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 import { PhotoService } from './photo/photo.service';
 import { CreateGalleryDto, UpdateGalleryDto } from './DTOs/gallery.dto';
@@ -15,13 +15,13 @@ export class GalleryController {
 
   // list of photos
   @Get('photos')
-  async ListPhoto(): Promise<IResponse<Photos[]>> {
-    return await this.galleryService.getAllPhoto();
+  async ListPhoto(@Query('page') page = 1, @Query('limit') limit = 12): Promise<IResponse<Photos[]>> {
+    return await this.galleryService.getAllPhoto(+page, +limit);
   }
   // filters of photos
   @Post('photos-filtered')
-  async ListFilteredPhoto(@Body() query: any): Promise<IResponse<Photos[]>> {
-    return await this.galleryService.getFilteredPhoto(query);
+  async ListFilteredPhoto(@Query('page') page = 1, @Query('limit') limit = 12, @Body() query: any): Promise<IResponse<Photos[]>> {
+    return await this.galleryService.getFilteredPhoto(query, +page, +limit);
   }
   // create photo with tag and user (photograph)
   @UseInterceptors(

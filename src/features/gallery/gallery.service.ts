@@ -50,14 +50,20 @@ export class GalleryService {
         this.photoPrisma = _dbService.prisma.photos;
     }
 
-    async getAllPhoto() {
+    async getAllPhoto(page: number, limit: number) {
+        const skip = page ? limit * page : 0;
         const photoFiltered = await this.galleryPrisma.findMany({
+            take: limit,
+            skip,
             select: this.selectFields
         });
-        return photoFiltered;
+        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+
+        return shuffled;
     }
 
-    async getFilteredPhoto(query: any) {
+    async getFilteredPhoto(query: any, page: number, limit: number) {
+        const skip = page ? limit * page : 0;
         const { name, tagNames, userName, userId, isAuthentified } = query;
         const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
         const userNameCondition = userName != undefined ? {
@@ -77,12 +83,16 @@ export class GalleryService {
         const orCondition = { OR: [photoName, userIdCondition, userNameCondition, tagsConditions] };
         const searchCondition = isAuthentified ? { AND: [userIdCondition, orCondition] } : orCondition;
         const photoFiltered = await this.galleryPrisma.findMany({
+            take: limit,
+            skip,
             where: {
                 searchCondition
             },
             select: this.selectFields
         });
-        return photoFiltered;
+        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+
+        return shuffled;
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
