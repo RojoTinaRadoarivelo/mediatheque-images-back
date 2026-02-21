@@ -1,4 +1,4 @@
-import { Body, Get, Post, Put, Delete, Param, UsePipes } from '@nestjs/common';
+import { Body, Get, Post, Put, Delete, Param, UsePipes, Query } from '@nestjs/common';
 
 
 
@@ -66,11 +66,19 @@ export abstract class CrudController<C, U, R> {
 
     }
 
+    @ApiMessage(`search`)
+    @Post('search')
+    searchMany(@Body() data: Partial<R>, @Query('page') page = 1, @Query('limit') limit = 12) {
+
+        return this.service.Search(data, +page, +limit);
+
+    }
+
     @ApiMessage(`list`)
     @Get()
-    findMany() {
+    findMany(@Query('page') page: number, @Query('limit') limit: number = 12) {
 
-        return this.service.FindMany();
+        return this.service.FindMany(+page, +limit);
 
     }
 }

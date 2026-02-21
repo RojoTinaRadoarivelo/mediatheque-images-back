@@ -2,10 +2,9 @@ import { Module } from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 import { GalleryController } from './gallery.controller';
 import { PhotoService } from './photo/photo.service';
-import { TagsModule } from '../tags/tags.module';
 
 @Module({
-  imports: [TagsModule],
+  imports: [],
   controllers: [GalleryController],
   providers: [GalleryService, PhotoService],
   exports: [GalleryService, PhotoService],

@@ -175,7 +175,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
             const paginationDefault: number = pagination ?? 10;
             const skip = pageIndex ? paginationDefault * pageIndex : 0;
             let responseData: R[] = [];
-            if (skip) {
+            if (pageIndex && pagination) {
                 if (query) {
                     responseData = await this.prismaModel.findMany({
                         where: query,
@@ -185,7 +185,6 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                     });
                 }
                 responseData = await this.prismaModel.findMany({
-                    where: {},
                     select: returnObjectParams,
                     take: paginationDefault,
                     skip,
@@ -198,7 +197,6 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                 });
             }
             responseData = await this.prismaModel.findMany({
-                where: {},
                 select: returnObjectParams
             });
             response = {

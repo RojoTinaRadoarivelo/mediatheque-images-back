@@ -1,12 +1,11 @@
 import { BadRequestException, ConflictException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { IPrismaService } from '../../core/configs/interfaces/prisma-ripository/prisma.service';
 import { PhotoService } from './photo/photo.service';
-import { TagsService } from '../tags/tags.service';
 import { CreateGalleryDto, UpdateGalleryDto } from './DTOs/gallery.dto';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { Photos } from './photo/photos.type';
 import { assertSingle } from '../../utils/interfaces/assert-single.utils';
-import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE, USER_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
+import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
 import { Galleries } from './gallery.type';
 
 @Injectable()
@@ -45,19 +44,55 @@ export class GalleryService {
 
     constructor(
         private readonly _dbService: IPrismaService,
-        private readonly _photoService: PhotoService,
-        private readonly _tagsService: TagsService
+        private readonly _photoService: PhotoService
     ) {
         this.galleryPrisma = _dbService.prisma.taggedPhoto;
         this.photoPrisma = _dbService.prisma.photos;
     }
 
-    async getAllPhoto() {
-        return await this._photoService.getAllPhoto();
+    async getAllPhoto(page: number, limit: number) {
+        const skip = page ? limit * page : 0;
+        const photoFiltered = await this.galleryPrisma.findMany({
+            take: limit,
+            skip,
+            select: this.selectFields
+        });
+        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+
+        return shuffled;
     }
 
-    async getFilteredPhoto(query: any) {
-        return await this._photoService.getFilteredPhotos(query);
+    async getFilteredPhoto(query: any, page: number, limit: number) {
+        const skip = page ? limit * page : 0;
+        const { name, tagNames, userName, userId, isAuthentified } = query;
+        const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
+        const userNameCondition = userName != undefined ? {
+            user: {
+                userName,
+                mode: "insensitive"
+            }
+        } : undefined;
+        const userIdCondition = userId != undefined ? {
+            user_id: userId
+        } : undefined;
+        const tagsConditions = tagNames != undefined ? {
+            tag: {
+                name: { in: tagNames, mode: "insensitive" }
+            }
+        } : undefined;
+        const orCondition = { OR: [photoName, userIdCondition, userNameCondition, tagsConditions] };
+        const searchCondition = isAuthentified ? { AND: [userIdCondition, orCondition] } : orCondition;
+        const photoFiltered = await this.galleryPrisma.findMany({
+            take: limit,
+            skip,
+            where: {
+                searchCondition
+            },
+            select: this.selectFields
+        });
+        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+
+        return shuffled;
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
