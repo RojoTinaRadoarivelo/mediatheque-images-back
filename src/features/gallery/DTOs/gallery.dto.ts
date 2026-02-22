@@ -14,6 +14,12 @@ export class CreateGalleryDto {
     tags_id: string[];
     @IsString({ message: ErrorMessages.INVALID_TYPE })
     @IsNotEmpty({ message: ErrorMessages.REQUIRED })
+    title: string;
+    @IsString({ message: ErrorMessages.INVALID_TYPE })
+    @IsNotEmpty({ message: ErrorMessages.REQUIRED })
+    description: string;
+    @IsString({ message: ErrorMessages.INVALID_TYPE })
+    @IsNotEmpty({ message: ErrorMessages.REQUIRED })
     user_id: string;
     @IsString({ message: ErrorMessages.INVALID_TYPE })
     @IsOptional()

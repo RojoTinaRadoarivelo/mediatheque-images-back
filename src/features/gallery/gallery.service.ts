@@ -24,7 +24,6 @@ export class GalleryService {
         },
         user: {
             select: {
-                id: true,
                 email: true,
                 userName: true,
                 avatar: true,
@@ -33,7 +32,6 @@ export class GalleryService {
         },
         tag: {
             select: {
-                id: true,
                 name: true,
                 isDeleted: true
             }
@@ -51,19 +49,25 @@ export class GalleryService {
     }
 
     async getAllPhoto(page: number, limit: number) {
-        const skip = page ? limit * page : 0;
+        const skip = page ? (page - 1) * limit : 0;
         const photoFiltered = await this.galleryPrisma.findMany({
             take: limit,
             skip,
-            select: this.selectFields
+            select: this.selectFields,
+            orderBy: {
+                createdAt: "desc"
+            }
         });
         const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
-
-        return shuffled;
+        return {
+            message: 'List of photos!',
+            data: shuffled ?? [],
+            statusCode: 200
+        };
     }
 
     async getFilteredPhoto(query: any, page: number, limit: number) {
-        const skip = page ? limit * page : 0;
+        const skip = page ? (page - 1) * limit : 0;
         const { name, tagNames, userName, userId, isAuthentified } = query;
         const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
         const userNameCondition = userName != undefined ? {
@@ -88,20 +92,27 @@ export class GalleryService {
             where: {
                 searchCondition
             },
-            select: this.selectFields
+            select: this.selectFields,
+            orderBy: {
+                createdAt: "desc"
+            }
         });
         const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
 
-        return shuffled;
+        return {
+            message: 'List of filtered photos!',
+            data: shuffled ?? [],
+            statusCode: 200
+        };
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
         let response: IResponse<any[]>;
         try {
-            const { name, path, tags_id, user_id } = data;
+            const { name, path, title, description, tags_id, user_id } = data;
             let responseData: any[] = [];
             // create photo
-            const photoCreated = await this._photoService.createPhoto({ name, path });
+            const photoCreated = await this._photoService.createPhoto({ name, path, title, description });
             let photo: Photos | null;
             if (photoCreated) {
                 photo = assertSingle(
@@ -112,8 +123,9 @@ export class GalleryService {
                 throw new InternalServerErrorException(DEFAULT_ERROR_MSG.unexpected)
             }
             if (photo) {
+                const tags: string[] = typeof tags_id == "string" ? [tags_id] : tags_id;
                 // link together
-                for (const tag_id of tags_id!) {
+                for (const tag_id of tags!) {
                     const photoTagged = await this.galleryPrisma.create({
                         data: {
                             photo_id: photo.id,
@@ -164,10 +176,10 @@ export class GalleryService {
     async updatePhoto(data: UpdateGalleryDto): Promise<IResponse<any[]>> {
         let response: IResponse<any[]>;
         try {
-            const { name, path, photo_id, tags_id, user_id } = data;
+            const { name, path, title, description, photo_id, tags_id, user_id } = data;
             let responseData: any[] = [];
             // update photo
-            const photoUpdated = await this._photoService.updatePhoto(photo_id!, { name, path });
+            const photoUpdated = await this._photoService.updatePhoto(photo_id!, { name, path, title, description });
             let photo: Photos | null;
             if (photoUpdated) {
                 photo = assertSingle(
@@ -178,6 +190,9 @@ export class GalleryService {
                 throw new InternalServerErrorException(DEFAULT_ERROR_MSG.unexpected)
             }
             if (photo) {
+                const tags: string[] = typeof tags_id == "string" ? [tags_id] : tags_id!;
+                // link together
+
                 // delete existing phototagged for the photo
                 await this.galleryPrisma.deleteMany({
                     where: {
@@ -186,7 +201,7 @@ export class GalleryService {
                     }
                 })
                 // link together            
-                for (const tag_id of tags_id!) {
+                for (const tag_id of tags!) {
                     const photoTagged = await this.galleryPrisma.create({
                         data: {
                             photo_id: photo.id,

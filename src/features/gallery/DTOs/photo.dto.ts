@@ -9,6 +9,12 @@ export class CreatePhotoDto {
     @IsString({ message: ErrorMessages.INVALID_TYPE })
     @IsNotEmpty({ message: ErrorMessages.REQUIRED })
     path: string;
+    @IsString({ message: ErrorMessages.INVALID_TYPE })
+    @IsNotEmpty({ message: ErrorMessages.REQUIRED })
+    title: string;
+    @IsString({ message: ErrorMessages.INVALID_TYPE })
+    @IsNotEmpty({ message: ErrorMessages.REQUIRED })
+    description: string;
 }
 
 export class UpdatePhotoDto extends PartialType(CreatePhotoDto) { }
