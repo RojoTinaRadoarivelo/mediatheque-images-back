@@ -69,7 +69,7 @@ export class GalleryService {
                 groupedMap.set(photoId, {
                     photo: element.photo,
                     user: element.user,
-                    tags: [],
+                    tag: [],
                     createdAt: element.createdAt,
                     updatedAt: element.updatedAt,
                 });
@@ -80,9 +80,9 @@ export class GalleryService {
             // push tag uniquement
             if (
                 element.tag &&
-                !group.tags.some((t: any) => t.name === element.tag.name)
+                !group.tag.some((t: any) => t.name === element.tag.name)
             ) {
-                group.tags.push(element.tag);
+                group.tag.push(element.tag);
             }
         }
 
@@ -128,7 +128,46 @@ export class GalleryService {
                 createdAt: "desc"
             }
         });
-        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+
+        // grouping result
+        const groupedMap = new Map<string, any>();
+        let groupName: string = '';
+
+
+        for (const element of photoFiltered) {
+            const photoId = element.photo.id;
+            if (userIdCondition) {
+                const userId = element.user.id;
+                groupName = `${photoId}_${userId}`;
+            } else {
+                groupName = photoId;
+            }
+
+            if (!groupedMap.has(groupName)) {
+                groupedMap.set(groupName, {
+                    photo: element.photo,
+                    user: element.user,
+                    tag: [],
+                    createdAt: element.createdAt,
+                    updatedAt: element.updatedAt,
+                });
+            }
+
+            const group = groupedMap.get(groupName);
+
+            // push tag uniquement
+            if (
+                element.tag &&
+                !group.tag.some((t: any) => t.name === element.tag.name)
+            ) {
+                group.tag.push(element.tag);
+            }
+        }
+
+        // Map → Array
+        const groupedBy = Array.from(groupedMap.values());
+
+        const shuffled = groupedBy.sort(() => Math.random() - 0.5);
 
         return {
             message: 'List of filtered photos!',
