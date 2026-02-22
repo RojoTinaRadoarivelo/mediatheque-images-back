@@ -19,6 +19,8 @@ export class GalleryService {
                 id: true,
                 name: true,
                 path: true,
+                title: true,
+                description: true,
                 isDeleted: true
             }
         },
@@ -58,7 +60,36 @@ export class GalleryService {
                 createdAt: "desc"
             }
         });
-        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+        const groupedMap = new Map<string, any>();
+
+        for (const element of photoFiltered) {
+            const photoId = element.photo.id;
+
+            if (!groupedMap.has(photoId)) {
+                groupedMap.set(photoId, {
+                    photo: element.photo,
+                    user: element.user,
+                    tags: [],
+                    createdAt: element.createdAt,
+                    updatedAt: element.updatedAt,
+                });
+            }
+
+            const group = groupedMap.get(photoId);
+
+            // push tag uniquement
+            if (
+                element.tag &&
+                !group.tags.some((t: any) => t.name === element.tag.name)
+            ) {
+                group.tags.push(element.tag);
+            }
+        }
+
+        // Map → Array
+        const groupedBy = Array.from(groupedMap.values());
+
+        const shuffled = groupedBy.sort(() => Math.random() - 0.5);
         return {
             message: 'List of photos!',
             data: shuffled ?? [],

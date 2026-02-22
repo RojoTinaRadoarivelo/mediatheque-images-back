@@ -16,7 +16,7 @@ async function bootstrap() {
     optionsSuccessStatus: 200,
   });
   app.useGlobalInterceptors(new ApiMessageInterceptor(app.get(Reflector)));
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(CONFIG_SERVICE.get<string>("GLOBAL_PREFIX") || "api/v1");
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

@@ -13,6 +13,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './features/users/users.module';
 import { TagsModule } from './features/tags/tags.module';
 import { GalleryModule } from './features/gallery/gallery.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+
+const globalPrefix = process.env.GLOBAL_PREFIX;
 
 @Module({
   imports: [
@@ -34,6 +38,10 @@ import { GalleryModule } from './features/gallery/gallery.module';
           },
         ],
       }),
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: `/${globalPrefix}/uploads`,
     }),
     AuthModule,
     UsersModule,
