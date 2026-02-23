@@ -101,29 +101,39 @@ export class GalleryService {
     async getFilteredPhoto(query: any, page: number, limit: number) {
         const skip = page ? (page - 1) * limit : 0;
         const { name, tagNames, userName, userId, isAuthentified } = query;
-        const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
-        const userNameCondition = userName != undefined ? {
-            user: {
-                userName,
-                mode: "insensitive"
-            }
-        } : undefined;
-        const userIdCondition = userId != undefined ? {
-            user_id: userId
-        } : undefined;
-        const tagsConditions = tagNames != undefined ? {
-            tag: {
-                name: { in: tagNames, mode: "insensitive" }
-            }
-        } : undefined;
-        const orCondition = { OR: [photoName, userIdCondition, userNameCondition, tagsConditions] };
-        const searchCondition = isAuthentified ? { AND: [userIdCondition, orCondition] } : orCondition;
+        // Construire les conditions uniquement si elles existent
+        const conditions: any[] = [];
+
+        if (name) {
+            conditions.push({ photo: { name, mode: "insensitive" } });
+        }
+
+        if (userId) {
+            conditions.push({ user_id: userId });
+        }
+
+        if (userName) {
+            conditions.push({ user: { userName, mode: "insensitive" } });
+        }
+
+        if (tagNames && tagNames.length > 0) {
+            conditions.push({ tag: { name: { in: tagNames, mode: "insensitive" } } });
+        }
+
+        let whereCondition: any;
+        if (isAuthentified && userId) {
+            // Si l'utilisateur est authentifié, on force la condition sur son userId
+            whereCondition = {
+                AND: [{ user_id: userId }, { OR: conditions }]
+            };
+        } else {
+            whereCondition = { OR: conditions };
+        }
+
         const photoFiltered = await this.galleryPrisma.findMany({
             take: limit,
             skip,
-            where: {
-                searchCondition
-            },
+            where: whereCondition,
             select: this.selectFields,
             orderBy: {
                 createdAt: "desc"
@@ -137,7 +147,7 @@ export class GalleryService {
 
         for (const element of photoFiltered) {
             const photoId = element.photo.id;
-            if (userIdCondition) {
+            if (userId && isAuthentified) {
                 const userId = element.user.id;
                 groupName = `${photoId}_${userId}`;
             } else {
