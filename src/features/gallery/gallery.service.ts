@@ -19,12 +19,13 @@ export class GalleryService {
                 id: true,
                 name: true,
                 path: true,
+                title: true,
+                description: true,
                 isDeleted: true
             }
         },
         user: {
             select: {
-                id: true,
                 email: true,
                 userName: true,
                 avatar: true,
@@ -33,7 +34,6 @@ export class GalleryService {
         },
         tag: {
             select: {
-                id: true,
                 name: true,
                 isDeleted: true
             }
@@ -51,19 +51,54 @@ export class GalleryService {
     }
 
     async getAllPhoto(page: number, limit: number) {
-        const skip = page ? limit * page : 0;
+        const skip = page ? (page - 1) * limit : 0;
         const photoFiltered = await this.galleryPrisma.findMany({
             take: limit,
             skip,
-            select: this.selectFields
+            select: this.selectFields,
+            orderBy: {
+                createdAt: "desc"
+            }
         });
-        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
+        const groupedMap = new Map<string, any>();
 
-        return shuffled;
+        for (const element of photoFiltered) {
+            const photoId = element.photo.id;
+
+            if (!groupedMap.has(photoId)) {
+                groupedMap.set(photoId, {
+                    photo: element.photo,
+                    user: element.user,
+                    tag: [],
+                    createdAt: element.createdAt,
+                    updatedAt: element.updatedAt,
+                });
+            }
+
+            const group = groupedMap.get(photoId);
+
+            // push tag uniquement
+            if (
+                element.tag &&
+                !group.tag.some((t: any) => t.name === element.tag.name)
+            ) {
+                group.tag.push(element.tag);
+            }
+        }
+
+        // Map → Array
+        const groupedBy = Array.from(groupedMap.values());
+
+        const shuffled = groupedBy.sort(() => Math.random() - 0.5);
+        return {
+            message: 'List of photos!',
+            data: shuffled ?? [],
+            statusCode: 200
+        };
     }
 
     async getFilteredPhoto(query: any, page: number, limit: number) {
-        const skip = page ? limit * page : 0;
+        const skip = page ? (page - 1) * limit : 0;
         const { name, tagNames, userName, userId, isAuthentified } = query;
         const photoName = name != undefined ? { photo: { name, mode: "insensitive" } } : undefined;
         const userNameCondition = userName != undefined ? {
@@ -88,20 +123,66 @@ export class GalleryService {
             where: {
                 searchCondition
             },
-            select: this.selectFields
+            select: this.selectFields,
+            orderBy: {
+                createdAt: "desc"
+            }
         });
-        const shuffled = photoFiltered.sort(() => Math.random() - 0.5);
 
-        return shuffled;
+        // grouping result
+        const groupedMap = new Map<string, any>();
+        let groupName: string = '';
+
+
+        for (const element of photoFiltered) {
+            const photoId = element.photo.id;
+            if (userIdCondition) {
+                const userId = element.user.id;
+                groupName = `${photoId}_${userId}`;
+            } else {
+                groupName = photoId;
+            }
+
+            if (!groupedMap.has(groupName)) {
+                groupedMap.set(groupName, {
+                    photo: element.photo,
+                    user: element.user,
+                    tag: [],
+                    createdAt: element.createdAt,
+                    updatedAt: element.updatedAt,
+                });
+            }
+
+            const group = groupedMap.get(groupName);
+
+            // push tag uniquement
+            if (
+                element.tag &&
+                !group.tag.some((t: any) => t.name === element.tag.name)
+            ) {
+                group.tag.push(element.tag);
+            }
+        }
+
+        // Map → Array
+        const groupedBy = Array.from(groupedMap.values());
+
+        const shuffled = groupedBy.sort(() => Math.random() - 0.5);
+
+        return {
+            message: 'List of filtered photos!',
+            data: shuffled ?? [],
+            statusCode: 200
+        };
     }
 
     async createPhoto(data: CreateGalleryDto): Promise<IResponse<any[]>> {
         let response: IResponse<any[]>;
         try {
-            const { name, path, tags_id, user_id } = data;
+            const { name, path, title, description, tags_id, user_id } = data;
             let responseData: any[] = [];
             // create photo
-            const photoCreated = await this._photoService.createPhoto({ name, path });
+            const photoCreated = await this._photoService.createPhoto({ name, path, title, description });
             let photo: Photos | null;
             if (photoCreated) {
                 photo = assertSingle(
@@ -112,8 +193,9 @@ export class GalleryService {
                 throw new InternalServerErrorException(DEFAULT_ERROR_MSG.unexpected)
             }
             if (photo) {
+                const tags: string[] = typeof tags_id == "string" ? [tags_id] : tags_id;
                 // link together
-                for (const tag_id of tags_id!) {
+                for (const tag_id of tags!) {
                     const photoTagged = await this.galleryPrisma.create({
                         data: {
                             photo_id: photo.id,
@@ -164,10 +246,10 @@ export class GalleryService {
     async updatePhoto(data: UpdateGalleryDto): Promise<IResponse<any[]>> {
         let response: IResponse<any[]>;
         try {
-            const { name, path, photo_id, tags_id, user_id } = data;
+            const { name, path, title, description, photo_id, tags_id, user_id } = data;
             let responseData: any[] = [];
             // update photo
-            const photoUpdated = await this._photoService.updatePhoto(photo_id!, { name, path });
+            const photoUpdated = await this._photoService.updatePhoto(photo_id!, { name, path, title, description });
             let photo: Photos | null;
             if (photoUpdated) {
                 photo = assertSingle(
@@ -178,6 +260,9 @@ export class GalleryService {
                 throw new InternalServerErrorException(DEFAULT_ERROR_MSG.unexpected)
             }
             if (photo) {
+                const tags: string[] = typeof tags_id == "string" ? [tags_id] : tags_id!;
+                // link together
+
                 // delete existing phototagged for the photo
                 await this.galleryPrisma.deleteMany({
                     where: {
@@ -186,7 +271,7 @@ export class GalleryService {
                     }
                 })
                 // link together            
-                for (const tag_id of tags_id!) {
+                for (const tag_id of tags!) {
                     const photoTagged = await this.galleryPrisma.create({
                         data: {
                             photo_id: photo.id,
@@ -231,100 +316,14 @@ export class GalleryService {
             return response;
         }
     }
-    async moveToBinPhoto(id: string) {
-        let response: IResponse<Galleries | null>;
-        try {
-            const responseData = await this.galleryPrisma.update({
-                where: { id, isDeleted: false },
-                data: { isDeleted: true },
-                select: this.selectFields
-            })
-            if (responseData) {
-                return {
-                    message: 'The photo was moved to bin successfuly!',
-                    data: responseData ?? null,
-                    statusCode: 200
-                };
-            } else throw new BadRequestException('Bad request while moving the photo to bin');
-
-        } catch (error) {
-            if (error instanceof NotFoundException) {
-                response = {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: error.message,
-                };
-            } else if (error instanceof ConflictException) {
-                response = {
-                    statusCode: HttpStatus.CONFLICT,
-                    message: error.message,
-                };
-            } else if (error instanceof BadRequestException) {
-                response = {
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    message: error.message,
-                };
-            } else {
-                response = {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: error.message,
-                };
-            }
-            return response;
-
-        }
-    }
-
-    async restoreFromBinPhoto(id: string) {
-        let response: IResponse<Galleries | null>;
-        try {
-            const responseData = await this.galleryPrisma.update({
-                where: { id, isDeleted: true },
-                data: { isDeleted: false },
-                select: this.selectFields
-            })
-            if (responseData) {
-                return {
-                    message: 'The photo was restored from bin successfuly!',
-                    data: responseData ?? null,
-                    statusCode: 200
-                };
-            }
-            else throw new BadRequestException('Bad request while restoring the photo from bin');
-        } catch (error) {
-            if (error instanceof NotFoundException) {
-                response = {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: error.message,
-                };
-            } else if (error instanceof ConflictException) {
-                response = {
-                    statusCode: HttpStatus.CONFLICT,
-                    message: error.message,
-                };
-            } else if (error instanceof BadRequestException) {
-                response = {
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    message: error.message,
-                };
-            } else {
-                response = {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: error.message,
-                };
-            }
-            return response;
-
-        }
-    }
 
     async deletePhoto(id: string) {
         let response: IResponse<Galleries | null>;
         try {
-            const responseData = await this.photoPrisma.delete({
+            const responseData = await this.galleryPrisma.deleteMany({
                 where: {
-                    taggedPhoto: { id, isDeleted: true }
-                },
-                select: { taggedPhoto: { select: this.selectFields } }
+                    photo_id: id
+                }
             })
             if (responseData) {
 

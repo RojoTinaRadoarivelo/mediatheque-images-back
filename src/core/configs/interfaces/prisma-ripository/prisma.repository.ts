@@ -173,7 +173,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
         let response: IResponse<R[]>;
         try {
             const paginationDefault: number = pagination ?? 10;
-            const skip = pageIndex ? paginationDefault * pageIndex : 0;
+            const skip = pageIndex ? paginationDefault * (pageIndex - 1) : 0;
             let responseData: R[] = [];
             if (pageIndex && pagination) {
                 if (query) {
@@ -182,22 +182,34 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                         select: returnObjectParams,
                         take: paginationDefault,
                         skip,
+                        orderBy: {
+                            createdAt: "desc"
+                        }
                     });
                 }
                 responseData = await this.prismaModel.findMany({
                     select: returnObjectParams,
                     take: paginationDefault,
                     skip,
+                    orderBy: {
+                        createdAt: "desc"
+                    }
                 });
             }
             if (query) {
                 responseData = await this.prismaModel.findMany({
                     where: query,
-                    select: returnObjectParams
+                    select: returnObjectParams,
+                    orderBy: {
+                        createdAt: "desc"
+                    }
                 });
             }
             responseData = await this.prismaModel.findMany({
-                select: returnObjectParams
+                select: returnObjectParams,
+                orderBy: {
+                    createdAt: "desc"
+                }
             });
             response = {
                 statusCode: HttpStatus.OK,
