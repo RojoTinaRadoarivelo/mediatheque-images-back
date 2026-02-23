@@ -100,12 +100,16 @@ export class GalleryService {
 
     async getFilteredPhoto(query: any, page: number, limit: number) {
         const skip = page ? (page - 1) * limit : 0;
-        const { name, tagNames, userName, userId, isAuthentified } = query;
+        const { name, title, tagNames, userName, userId, isAuthentified } = query;
         // Construire les conditions uniquement si elles existent
         const conditions: any[] = [];
 
         if (name) {
             conditions.push({ photo: { name, mode: "insensitive" } });
+        }
+
+        if (title) {
+            conditions.push({ photo: { title, mode: "insensitive" } });
         }
 
         if (userId) {
