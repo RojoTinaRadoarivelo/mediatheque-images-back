@@ -355,4 +355,49 @@ export class GalleryService {
 
         }
     }
+
+    async findById(id: string) {
+        let response: IResponse<Galleries | null>;
+        try {
+            const responseData = await this.galleryPrisma.findFirst({
+                where: {
+                    photo_id: id
+                },
+                select: {
+                    photo: {
+                        select: {
+                            path: true,
+
+                        }
+                    }
+                }
+            })
+            if (responseData) {
+                return {
+                    message: 'The photo was found successfuly!',
+                    data: responseData ?? null,
+                    statusCode: 200
+                };
+            }
+            else throw new BadRequestException('Bad request while finding the photo');
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                response = {
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: error.message,
+                };
+            } else if (error instanceof BadRequestException) {
+                response = {
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: error.message,
+                };
+            } else {
+                response = {
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: error.message,
+                };
+            }
+            return response;
+        }
+    }
 }
