@@ -7,6 +7,7 @@ import { Photos } from './photo/photos.type';
 import { assertSingle } from '../../utils/interfaces/assert-single.utils';
 import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
 import { Galleries } from './gallery.type';
+import { RemoveFile } from '../../utils/files.util';
 
 @Injectable()
 export class GalleryService {
@@ -195,18 +196,19 @@ export class GalleryService {
             if (photo) {
                 const tags: string[] = typeof tags_id == "string" ? [tags_id] : tags_id;
                 // link together
-                for (const tag_id of tags!) {
-                    const photoTagged = await this.galleryPrisma.create({
-                        data: {
-                            photo_id: photo.id,
-                            tag_id,
-                            user_id
-                        }
-                    });
-                    if (photoTagged) {
-                        responseData.push(photoTagged)
-                    } else throw new BadRequestException('Bad request while creating the photo');
-                }
+                const photoTagged = await Promise.all(
+                    tags.map(tag_id =>
+                        this.galleryPrisma.create({
+                            data: {
+                                photo_id: photo.id,
+                                tag_id,
+                                user_id,
+                            },
+                        }),
+                    ),
+                );
+
+                responseData.push(...photoTagged);
                 return {
                     message: 'The photo was created successfuly!',
                     data: responseData ?? [],
@@ -243,11 +245,24 @@ export class GalleryService {
         }
     }
 
-    async updatePhoto(data: UpdateGalleryDto): Promise<IResponse<any[]>> {
+    async updatePhoto(data: UpdateGalleryDto, hasFile: boolean = false): Promise<IResponse<any[]>> {
         let response: IResponse<any[]>;
         try {
             const { name, path, title, description, photo_id, tags_id, user_id } = data;
             let responseData: any[] = [];
+            const existingPhoto = await this.photoPrisma.findUnique({
+                where: { id: photo_id },
+                select: { path: true },
+            });
+
+            if (!existingPhoto) {
+                throw new NotFoundException(PHOTO_ERROR_MESSAGE.notfound);
+            }
+
+            // 2️⃣ supprimer l’ancienne image SI changement
+            if (hasFile && existingPhoto.path && existingPhoto.path !== path) {
+                RemoveFile(existingPhoto.path);
+            }
             // update photo
             const photoUpdated = await this._photoService.updatePhoto(photo_id!, { name, path, title, description });
             let photo: Photos | null;
@@ -270,19 +285,20 @@ export class GalleryService {
                         user_id
                     }
                 })
-                // link together            
-                for (const tag_id of tags!) {
-                    const photoTagged = await this.galleryPrisma.create({
-                        data: {
-                            photo_id: photo.id,
-                            tag_id,
-                            user_id
-                        }
-                    });
-                    if (photoTagged) {
-                        responseData.push(photoTagged)
-                    } else throw new BadRequestException('Bad request while updating the photo');
-                }
+                // link together  
+                const photoTagged = await Promise.all(
+                    tags.map(tag_id =>
+                        this.galleryPrisma.create({
+                            data: {
+                                photo_id: photo.id,
+                                tag_id,
+                                user_id,
+                            },
+                        }),
+                    ),
+                );
+
+                responseData.push(...photoTagged);
                 return {
                     message: 'The photo was updated successfuly!',
                     data: responseData ?? [],
@@ -320,6 +336,17 @@ export class GalleryService {
     async deletePhoto(id: string) {
         let response: IResponse<Galleries | null>;
         try {
+            const photo = await this.photoPrisma.findUnique({
+                where: { id },
+                select: { path: true },
+            });
+
+            if (!photo) {
+                throw new NotFoundException("Photo not found");
+            }
+
+            RemoveFile(photo.path);
+
             const responseData = await this.galleryPrisma.deleteMany({
                 where: {
                     photo_id: id
