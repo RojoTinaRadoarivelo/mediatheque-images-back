@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 import { PhotoService } from './photo/photo.service';
 import { CreateGalleryDto, UpdateGalleryDto } from './DTOs/gallery.dto';
@@ -38,8 +38,8 @@ export class GalleryController {
       }),
       fileFilter: (req, file, cb) => {
         // Accepter uniquement les fichiers Image
-        if (!file.originalname.match(/\.(png|jpg|jpeg)$/)) {
-          return cb(new Error('Seuls les fichiers Image sont acceptés'), false);
+        if (!file.originalname.match(/\.(png|jpg|jpeg)$/i)) {
+          return cb(new Error('Seuls les fichiers Image sont acceptÃ©s'), false);
         }
         cb(null, true);
       },
@@ -69,8 +69,8 @@ export class GalleryController {
       }),
       fileFilter: (req, file, cb) => {
         // Accepter uniquement les fichiers Image
-        if (!file.originalname.match(/\.(png|jpg|jpeg)$/)) {
-          return cb(new Error('Seuls les fichiers Image sont acceptés'), false);
+        if (!file.originalname.match(/\.(png|jpg|jpeg)$/i)) {
+          return cb(new Error('Seuls les fichiers Image sont acceptÃ©s'), false);
         }
         cb(null, true);
       },
@@ -80,7 +80,7 @@ export class GalleryController {
   async UpdatePhoto(@UploadedFile() file: Express.Multer.File, @Body() data: UpdateGalleryDto): Promise<IResponse<any[]>> {
     const filePath = file?.path ?? data.path;
     data.path = filePath;
-    return await this.galleryService.updatePhoto(data);
+    return await this.galleryService.updatePhoto(data, file ? true : false);
   }
   // delete photo
   @Delete('photos/:id')
@@ -90,7 +90,7 @@ export class GalleryController {
 
   @Get('photos/:id/download')
   async downloadPhoto(@Param('id') id: string, @Res() res: Response) {
-    // Récupérer les infos du fichier depuis la DB
+    // RÃ©cupÃ©rer les infos du fichier depuis la DB
     const photo = await this.galleryService.findById(id);
     if (!photo.data) {
       return res.status(404).json({ message: 'Photo not found' });
@@ -102,7 +102,7 @@ export class GalleryController {
     // Ne prendre que le nom du fichier (sans le dossier)
     const fileName = basename(filePath); // "Photo-1771764399638-194926642.jpg"
 
-    // Détecter type MIME
+    // DÃ©tecter type MIME
     const ext = fileName.split('.').pop()?.toLowerCase();
     let contentType = 'application/octet-stream';
     if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
@@ -117,3 +117,4 @@ export class GalleryController {
     res.sendFile(filePath);
   }
 }
+
