@@ -14,6 +14,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
     optionsSuccessStatus: 200,
+    exposedHeaders: ['Content-Disposition'],
   });
   app.useGlobalInterceptors(new ApiMessageInterceptor(app.get(Reflector)));
   app.setGlobalPrefix(CONFIG_SERVICE.get<string>("GLOBAL_PREFIX") || "api/v1");

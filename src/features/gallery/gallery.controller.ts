@@ -1,12 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 import { PhotoService } from './photo/photo.service';
 import { CreateGalleryDto, UpdateGalleryDto } from './DTOs/gallery.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { extname } from 'path';
+import { basename, extname } from 'path';
 import { diskStorage } from 'multer';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { Galleries } from './gallery.type';
+import { Response } from 'express';
+import { join } from 'path';
 
 @Controller('gallery')
 export class GalleryController {
@@ -84,5 +86,34 @@ export class GalleryController {
   @Delete('photos/:id')
   async DeletePhoto(@Param('id') id: string): Promise<IResponse<Galleries | null>> {
     return await this.galleryService.deletePhoto(id);
+  }
+
+  @Get('photos/:id/download')
+  async downloadPhoto(@Param('id') id: string, @Res() res: Response) {
+    // Récupérer les infos du fichier depuis la DB
+    const photo = await this.galleryService.findById(id);
+    if (!photo.data) {
+      return res.status(404).json({ message: 'Photo not found' });
+    }
+
+
+    const filePath = join(process.cwd(), photo.data.photo.path);
+
+    // Ne prendre que le nom du fichier (sans le dossier)
+    const fileName = basename(filePath); // "Photo-1771764399638-194926642.jpg"
+
+    // Détecter type MIME
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    let contentType = 'application/octet-stream';
+    if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+    else if (ext === 'png') contentType = 'image/png';
+    else if (ext === 'gif') contentType = 'image/gif';
+    else if (ext === 'webp') contentType = 'image/webp';
+
+    // Headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    res.sendFile(filePath);
   }
 }
