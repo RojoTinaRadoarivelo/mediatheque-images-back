@@ -52,16 +52,7 @@ export class GalleryController {
     data.path = filePath;
     return await this.galleryService.createPhoto(data);
   }
-  // move to bin
-  @Put('photos/moveToBin/:id')
-  async MoveToBinPhoto(@Param('id') id: string): Promise<IResponse<Galleries | null>> {
-    return await this.galleryService.moveToBinPhoto(id);
-  }
-  // restore from bin
-  @Put('photos/restoreFromBin/:id')
-  async RestoreFromBinPhoto(@Param('id') id: string): Promise<IResponse<Galleries | null>> {
-    return await this.galleryService.restoreFromBinPhoto(id);
-  }
+
   // update tags properties and/or for the photo
   @UseInterceptors(
     FileInterceptor('objectFile', {

@@ -316,100 +316,14 @@ export class GalleryService {
             return response;
         }
     }
-    async moveToBinPhoto(id: string) {
-        let response: IResponse<Galleries | null>;
-        try {
-            const responseData = await this.galleryPrisma.update({
-                where: { id, isDeleted: false },
-                data: { isDeleted: true },
-                select: this.selectFields
-            })
-            if (responseData) {
-                return {
-                    message: 'The photo was moved to bin successfuly!',
-                    data: responseData ?? null,
-                    statusCode: 200
-                };
-            } else throw new BadRequestException('Bad request while moving the photo to bin');
-
-        } catch (error) {
-            if (error instanceof NotFoundException) {
-                response = {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: error.message,
-                };
-            } else if (error instanceof ConflictException) {
-                response = {
-                    statusCode: HttpStatus.CONFLICT,
-                    message: error.message,
-                };
-            } else if (error instanceof BadRequestException) {
-                response = {
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    message: error.message,
-                };
-            } else {
-                response = {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: error.message,
-                };
-            }
-            return response;
-
-        }
-    }
-
-    async restoreFromBinPhoto(id: string) {
-        let response: IResponse<Galleries | null>;
-        try {
-            const responseData = await this.galleryPrisma.update({
-                where: { id, isDeleted: true },
-                data: { isDeleted: false },
-                select: this.selectFields
-            })
-            if (responseData) {
-                return {
-                    message: 'The photo was restored from bin successfuly!',
-                    data: responseData ?? null,
-                    statusCode: 200
-                };
-            }
-            else throw new BadRequestException('Bad request while restoring the photo from bin');
-        } catch (error) {
-            if (error instanceof NotFoundException) {
-                response = {
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: error.message,
-                };
-            } else if (error instanceof ConflictException) {
-                response = {
-                    statusCode: HttpStatus.CONFLICT,
-                    message: error.message,
-                };
-            } else if (error instanceof BadRequestException) {
-                response = {
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    message: error.message,
-                };
-            } else {
-                response = {
-                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: error.message,
-                };
-            }
-            return response;
-
-        }
-    }
 
     async deletePhoto(id: string) {
         let response: IResponse<Galleries | null>;
         try {
-            const responseData = await this.photoPrisma.delete({
+            const responseData = await this.galleryPrisma.deleteMany({
                 where: {
-                    taggedPhoto: { id, isDeleted: true }
-                },
-                select: { taggedPhoto: { select: this.selectFields } }
+                    photo_id: id
+                }
             })
             if (responseData) {
 
