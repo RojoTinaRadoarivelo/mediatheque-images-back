@@ -105,33 +105,77 @@ export class GalleryService {
         const conditions: any[] = [];
 
         if (name) {
-            conditions.push({ photo: { name, mode: "insensitive" } });
+            conditions.push({
+                photo: {
+                    name: {
+                        contains: name,
+                        mode: "insensitive",
+                    }
+                }
+            });
         }
 
         if (title) {
-            conditions.push({ photo: { title, mode: "insensitive" } });
+            conditions.push({
+                photo: {
+                    title: {
+                        contains: title,
+                        mode: "insensitive",
+                    }
+                }
+            });
         }
 
-        if (userId) {
-            conditions.push({ user_id: userId });
-        }
+        // if (userId) {
+        //     conditions.push({ user_id: userId });
+        // }
 
         if (userName) {
-            conditions.push({ user: { userName, mode: "insensitive" } });
+            conditions.push({
+                user: {
+                    userName: {
+                        contains: userName,
+                        mode: "insensitive",
+                    }
+                }
+            });
         }
 
         if (tagNames && tagNames.length > 0) {
-            conditions.push({ tag: { name: { in: tagNames, mode: "insensitive" } } });
+            conditions.push({
+                OR: tagNames.map((tag: string) => ({
+                    tag: {
+                        name: {
+                            contains: tag,
+                            mode: "insensitive",
+                        },
+                    },
+                })),
+            });
         }
 
-        let whereCondition: any;
-        if (isAuthentified && userId) {
-            // Si l'utilisateur est authentifié, on force la condition sur son userId
-            whereCondition = {
-                AND: [{ user_id: userId }, { OR: conditions }]
-            };
+        let whereCondition: any = {};
+        if (userId && isAuthentified) {
+            // Si on a un user connecté → filtre sur ses images + autres conditions
+            if (conditions.length > 0) {
+                whereCondition = {
+                    AND: [
+                        { user_id: userId }, // seulement ses photos
+                        { OR: conditions }   // et les autres filtres texte/tags
+                    ]
+                };
+            } else {
+                // juste filtrer par userId
+                whereCondition = { user_id: userId };
+            }
         } else {
-            whereCondition = { OR: conditions };
+            // pas de userId → tout le monde
+            if (conditions.length > 0) {
+                whereCondition = { OR: conditions };
+            } else {
+                // aucun filtre → rien, retourne tout
+                whereCondition = {};
+            }
         }
 
         const photoFiltered = await this.galleryPrisma.findMany({
