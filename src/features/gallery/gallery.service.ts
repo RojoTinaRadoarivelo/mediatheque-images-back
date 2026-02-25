@@ -411,6 +411,7 @@ export class GalleryService {
                 }
             })
             if (responseData) {
+                await this.photoPrisma.delete({ where: { id } });
 
                 return {
                     message: 'The photo was deleted successfuly!',
