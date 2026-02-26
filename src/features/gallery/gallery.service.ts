@@ -403,7 +403,6 @@ export class GalleryService {
                 throw new NotFoundException("Photo not found");
             }
 
-            RemoveFile(photo.path);
 
             const responseData = await this.galleryPrisma.deleteMany({
                 where: {
@@ -411,7 +410,10 @@ export class GalleryService {
                 }
             })
             if (responseData) {
-                await this.photoPrisma.delete({ where: { id } });
+                const deleted = await this._photoService.deletePhoto(id, photo.path);
+                if (!deleted.statusCode || deleted.statusCode != HttpStatus.OK) {
+                    throw new InternalServerErrorException(deleted.message || "There was an error while deleting the photo")
+                }
 
                 return {
                     message: 'The photo was deleted successfuly!',

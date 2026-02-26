@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Put, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 
@@ -49,7 +49,7 @@ export class UsersController extends CrudController<CreateUserDto, UpdateUserDto
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
-          cb(null, `Photo-${uniqueSuffix}${ext}`);
+          cb(null, `Avatar-${uniqueSuffix}${ext}`);
         },
       }),
       fileFilter: (req, file, cb) => {
@@ -76,7 +76,13 @@ export class UsersController extends CrudController<CreateUserDto, UpdateUserDto
 
     const file: Express.Multer.File | undefined = req?.file;
     validated.avatar = file?.path ?? validated.avatar;
-    return await this.service.Update(id, validated, { hasFile: !!file });
+    return await this.service.Update(req.user.id, validated, { hasFile: !!file });
+  }
+
+  @ApiMessage(`delete`)
+  @Delete(':id')
+  override async delete(id: string): Promise<IResponse<Users | null>> {
+    return await this.service.Delete(id);
   }
 
 }

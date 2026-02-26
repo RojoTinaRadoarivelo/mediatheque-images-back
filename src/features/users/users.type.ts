@@ -23,6 +23,7 @@ export const UsersOutputDto = {
 }
 
 export const CreatedUserOutputDto = {
+    id: true,
     email: true,
     userName: true,
     avatar: true,
