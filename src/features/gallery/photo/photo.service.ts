@@ -1,8 +1,9 @@
-import { BadRequestException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { IPrismaService } from '../../../core/configs/interfaces/prisma-ripository/prisma.service';
 import { CreatePhotoDto, UpdatePhotoDto } from '../DTOs/photo.dto';
 import { IResponse } from '../../../shared/interfaces/responses.interfaces';
 import { Photos } from './photos.type';
+import { RemoveFile } from '../../../utils/files.util';
 
 @Injectable()
 export class PhotoService {
@@ -87,6 +88,26 @@ export class PhotoService {
             }
             return response;
 
+        }
+
+    }
+
+    async deletePhoto(id: string, path: string) {
+        try {
+            const deleted = await this.photosPrisma.delete({ where: { id } });
+            if (deleted) {
+                RemoveFile(path);
+                return {
+                    statusCode: HttpStatus.OK,
+                    message: "Photo deleted successfuly.",
+                }
+            } else throw new InternalServerErrorException("There was an error while deleting the photo");
+        } catch (error) {
+            console.log(error.message);
+            return {
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message,
+            };
         }
 
     }

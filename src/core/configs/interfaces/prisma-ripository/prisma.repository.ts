@@ -99,7 +99,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                     throw new BadRequestException('There was an error deleting the data!');
                 }
                 response = {
-                    statusCode: HttpStatus.CREATED,
+                    statusCode: HttpStatus.OK,
                     data: responseData,
                 };
                 return response;
@@ -109,7 +109,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                 throw new BadRequestException('There was an error deleting the data!');
             }
             response = {
-                statusCode: HttpStatus.CREATED,
+                statusCode: HttpStatus.OK,
                 data: responseData,
             };
             return response;
@@ -352,7 +352,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                     throw new BadRequestException('There was an error moving the data into bin!');
                 }
                 response = {
-                    statusCode: HttpStatus.CREATED,
+                    statusCode: HttpStatus.OK,
                     data: responseData,
                 };
                 return response;
@@ -362,7 +362,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                 throw new BadRequestException('There was an error moving the data into bin!');
             }
             response = {
-                statusCode: HttpStatus.CREATED,
+                statusCode: HttpStatus.OK,
                 data: responseData,
             };
             return response;
@@ -391,7 +391,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                     throw new BadRequestException('There was an error restoring the data frmo bin!');
                 }
                 response = {
-                    statusCode: HttpStatus.CREATED,
+                    statusCode: HttpStatus.OK,
                     data: responseData,
                 };
                 return response;
@@ -401,7 +401,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                 throw new BadRequestException('There was an error restoring the data frmo bin!');
             }
             response = {
-                statusCode: HttpStatus.CREATED,
+                statusCode: HttpStatus.OK,
                 data: responseData,
             };
             return response;
