@@ -4,10 +4,11 @@ import * as jwt from 'jsonwebtoken';
 import { cookieOptions } from '../../utils/cookies.util';
 import { UsersService } from '../../features/users/users.service';
 import { FilterUsersOutputDto } from '../../features/users/users.type';
+import { UserPreferencesService } from '../../features/user-preferences/user-preferences.service';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(private readonly _userService: UsersService) { }
+  constructor(private readonly _userService: UsersService, private readonly _preferenceService: UserPreferencesService) { }
   async use(req: any, res: any, next: () => void): Promise<void> {
     const authCookie = req.cookies['accessToken'];
 
@@ -36,6 +37,7 @@ export class AuthMiddleware implements NestMiddleware {
 
       if (user?.data && typeof FilterUsersOutputDto == typeof user.data) {
         req.user = user.data;
+        req.user.preference = (await this.findPreference(user.data.id)).data || null;
       } else {
         res.clearCookie('accessToken', cookieOptions);
         req.user = null;
@@ -47,5 +49,8 @@ export class AuthMiddleware implements NestMiddleware {
   }
   private async findUser(id: string | null, query: any): Promise<any> {
     return await this._userService.FindOne(query ?? { id });
+  }
+  private async findPreference(user_id: string) {
+    return await this._preferenceService.FindOne({ user_id });
   }
 }

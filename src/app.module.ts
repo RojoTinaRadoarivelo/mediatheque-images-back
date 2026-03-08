@@ -15,6 +15,7 @@ import { TagsModule } from './features/tags/tags.module';
 import { GalleryModule } from './features/gallery/gallery.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { UserPreferencesModule } from './features/user-preferences/user-preferences.module';
 
 const globalPrefix = process.env.GLOBAL_PREFIX;
 
@@ -46,7 +47,8 @@ const globalPrefix = process.env.GLOBAL_PREFIX;
     AuthModule,
     UsersModule,
     TagsModule,
-    GalleryModule
+    GalleryModule,
+    UserPreferencesModule
   ],
   controllers: [AppController],
   providers: [

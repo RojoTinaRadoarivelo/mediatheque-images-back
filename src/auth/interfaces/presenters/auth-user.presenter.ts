@@ -16,6 +16,7 @@ export class AuthUserPresenter implements Presenter<Users, SignedUserDto> {
         email: data.email,
         avatar: data.avatar ?? '',
         userName: data.userName ?? '',
+        preference: data.preference ?? null
       };
     } else {
       response = null;

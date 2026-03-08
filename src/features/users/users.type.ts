@@ -7,6 +7,7 @@ export class Users {
     createdAt: Date;
     avatar: string;
     userName: string;
+    preference: JSON | null;
 
 }
 
