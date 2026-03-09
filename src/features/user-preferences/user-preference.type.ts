@@ -2,7 +2,7 @@
 // MODEL
 export class Preferences {
     id: string;
-    preferences: JSON;
+    preferences: any;
     user_id: string;
     createdAt: Date;
 

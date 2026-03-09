@@ -6,9 +6,8 @@ export class CreatePreferenceDto {
     @IsUUID('4', { message: ErrorMessages.INVALID_ID })
     @IsNotEmpty({ message: ErrorMessages.REQUIRED })
     user_id: string;
-    @IsJSON({ message: ErrorMessages.INVALID_TYPE })
     @IsNotEmpty({ message: ErrorMessages.REQUIRED })
-    preferences;
+    preferences: any;
 
 }
 

@@ -15,10 +15,11 @@ import { extname } from 'path';
 import { IResponse } from '../../shared/interfaces/responses.interfaces';
 import { ApiMessage } from '../../shared/middlewares/decorators/api-message';
 import { GenericDtoValidatorPipe } from '../../shared/middlewares/pipes/generic-dto-validator.pipe';
+import { UserPreferencesService } from '../user-preferences/user-preferences.service';
 
 @Controller('users')
 export class UsersController extends CrudController<CreateUserDto, UpdateUserDto, Users> {
-  constructor(protected readonly service: UsersService) { super(service); }
+  constructor(protected readonly service: UsersService, private readonly _preferenceService: UserPreferencesService) { super(service); }
   protected getCreateDto() {
     return CreateUserDto;
   }
@@ -33,7 +34,12 @@ export class UsersController extends CrudController<CreateUserDto, UpdateUserDto
   @UseGuards(AuthGuard)
   async FindByToken(@Req() req: any): Promise<reponsesDTO<SignedUserDto>> {
     const userPresenter: AuthUserPresenter = new AuthUserPresenter();
-    const dataResponse = req.user ? userPresenter.present(req.user) : null;
+    let dataResponse: SignedUserDto | null = null;
+    if (req.user) {
+      const findPreference = await this.findPreference(req.user.id);
+      req.user.preference = findPreference?.data ?? null;
+      dataResponse = userPresenter.present(req.user);
+    }
     return {
       message: 'Information about the user',
       data: dataResponse,
@@ -85,4 +91,7 @@ export class UsersController extends CrudController<CreateUserDto, UpdateUserDto
     return await this.service.Delete(id);
   }
 
+  private async findPreference(user_id: string) {
+    return await this._preferenceService.FindOne({ user_id, isDeleted: false });
+  }
 }

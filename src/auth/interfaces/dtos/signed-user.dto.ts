@@ -3,5 +3,5 @@ export class SignedUserDto {
   email: string;
   avatar?: string;
   userName?: string;
-  preference?: JSON | null;
+  preference?: any;
 }
