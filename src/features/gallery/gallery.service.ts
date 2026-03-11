@@ -13,6 +13,7 @@ import { RemoveFile } from '../../utils/files.util';
 export class GalleryService {
     private readonly galleryPrisma: any;
     private readonly photoPrisma: any;
+    private readonly tagPrisma: any;
     private readonly selectFields: any = {
         id: true,
         photo: {
@@ -49,6 +50,7 @@ export class GalleryService {
     ) {
         this.galleryPrisma = _dbService.prisma.taggedPhoto;
         this.photoPrisma = _dbService.prisma.photos;
+        this.tagPrisma = _dbService.prisma.tags;
     }
 
     async getAllPhoto(page: number, limit: number) {
@@ -100,12 +102,13 @@ export class GalleryService {
 
     async getFilteredPhoto(query: any, page: number, limit: number) {
         const skip = page ? (page - 1) * limit : 0;
-        const { name, title, tagNames, userName, userId, isAuthentified } = query;
+        const { name, title, tagNames, userName, userId, isAuthentified, tagMode } = query;
+
         // Construire les conditions uniquement si elles existent
-        const conditions: any[] = [];
+        const textConditions: any[] = [];
 
         if (name) {
-            conditions.push({
+            textConditions.push({
                 photo: {
                     name: {
                         contains: name,
@@ -116,7 +119,7 @@ export class GalleryService {
         }
 
         if (title) {
-            conditions.push({
+            textConditions.push({
                 photo: {
                     title: {
                         contains: title,
@@ -131,7 +134,7 @@ export class GalleryService {
         // }
 
         if (userName) {
-            conditions.push({
+            textConditions.push({
                 user: {
                     userName: {
                         contains: userName,
@@ -141,41 +144,103 @@ export class GalleryService {
             });
         }
 
+        const isAuthUser = !!(userId && isAuthentified);
+        // If authenticated, scope results to the user's tagged photos
+        const shouldScopeToUser = isAuthUser;
+        let tagPhotoIds: string[] | null = null;
         if (tagNames && tagNames.length > 0) {
-            conditions.push({
-                OR: tagNames.map((tag: string) => ({
-                    tag: {
-                        name: {
-                            contains: tag,
-                            mode: "insensitive",
+            const uniqueTagNames = Array.from(
+                new Set(
+                    tagNames
+                        .map((t: string) => (t || '').trim())
+                        .filter((t: string) => t.length > 0)
+                )
+            );
+
+            if (uniqueTagNames.length > 0) {
+                const effectiveTagMode: 'search' | 'exact' =
+                    tagMode === 'search' || tagMode === 'exact' ? tagMode : 'exact';
+
+                if (effectiveTagMode === 'search') {
+
+                    textConditions.push({
+                        OR: uniqueTagNames.map((tag: string) => ({
+                            tag: {
+                                name: {
+                                    contains: tag,
+                                    mode: "insensitive",
+                                },
+                            },
+                        })),
+                    });
+                } else {
+                    const tagsFound = await this.tagPrisma.findMany({
+                        where: {
+                            name: {
+                                in: uniqueTagNames,
+                                mode: "insensitive",
+                            },
                         },
-                    },
-                })),
-            });
+                        select: { id: true }
+                    });
+
+                    const tagIds = tagsFound.map((t: any) => t.id);
+                    if (tagIds.length !== uniqueTagNames.length) {
+                        return {
+                            message: 'List of filtered photos!',
+                            data: [],
+                            statusCode: 200
+                        };
+                    }
+
+                    const tagWhere: any = {
+                        tag_id: {
+                            in: tagIds,
+                        },
+                    };
+
+                    if (shouldScopeToUser) {
+                        tagWhere.user_id = userId;
+                    }
+
+                    const taggedGroups = await this.galleryPrisma.groupBy({
+                        by: ['photo_id'],
+                        where: tagWhere,
+                        _count: { photo_id: true },
+                        having: { photo_id: { _count: { gte: tagIds.length } } },
+                    });
+
+                    tagPhotoIds = taggedGroups.map((g: any) => g.photo_id);
+                    if (tagPhotoIds?.length === 0) {
+                        return {
+                            message: 'List of filtered photos!',
+                            data: [],
+                            statusCode: 200
+                        };
+                    }
+                }
+            }
         }
 
         let whereCondition: any = {};
-        if (userId && isAuthentified) {
-            // Si on a un user connecté → filtre sur ses images + autres conditions
-            if (conditions.length > 0) {
-                whereCondition = {
-                    AND: [
-                        { user_id: userId }, // seulement ses photos
-                        { OR: conditions }   // et les autres filtres texte/tags
-                    ]
-                };
-            } else {
-                // juste filtrer par userId
-                whereCondition = { user_id: userId };
-            }
+        const andConditions: any[] = [];
+
+        if (tagPhotoIds && tagPhotoIds.length > 0) {
+            andConditions.push({ photo_id: { in: tagPhotoIds } });
+        }
+
+        if (textConditions.length > 0) {
+            andConditions.push({ OR: textConditions });
+        }
+
+        if (shouldScopeToUser) {
+            andConditions.push({ user_id: userId });
+        }
+
+        if (andConditions.length > 0) {
+            whereCondition = { AND: andConditions };
         } else {
-            // pas de userId → tout le monde
-            if (conditions.length > 0) {
-                whereCondition = { OR: conditions };
-            } else {
-                // aucun filtre → rien, retourne tout
-                whereCondition = {};
-            }
+            whereCondition = {};
         }
 
         const photoFiltered = await this.galleryPrisma.findMany({
@@ -187,6 +252,7 @@ export class GalleryService {
                 createdAt: "desc"
             }
         });
+
 
         // grouping result
         const groupedMap = new Map<string, any>();
@@ -489,3 +555,5 @@ export class GalleryService {
         }
     }
 }
+
+
