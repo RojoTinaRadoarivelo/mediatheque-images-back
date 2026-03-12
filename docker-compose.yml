@@ -1,0 +1,21 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.image
+    env_file:
+      - .env
+    environment:
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      PORT: 3002
+    ports:
+      - "3002:3002"
+    depends_on:
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"

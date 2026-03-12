@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UsePipes } from '@nestjs/common';
 
 import { MfaService } from './mfa.service';
 import {
@@ -11,6 +11,11 @@ import { reponsesDTO } from '../../utils/interfaces/responses';
 @Controller('auth')
 export class MfaController {
   constructor(private readonly _mfaService: MfaService) { }
+
+  @Get('google/redirect')
+  RedirectGoogle(@Query('code') code?: string, @Query('error') error?: string) {
+    return { code: code || null, error: error || null };
+  }
   @Post('send-verification-code')
   @UsePipes(new GenericDtoValidatorPipe(SendVerificationCodeDto))
   async SendVerification(
