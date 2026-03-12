@@ -6,6 +6,7 @@ import { google } from 'googleapis';
 @Injectable()
 export class SMTPUtil {
   private gmailTransporter: nodemailer.Transporter;
+  private smtpTransporter: nodemailer.Transporter;
   private readonly mailhogTransporter: nodemailer.Transporter;
 
   clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
@@ -53,24 +54,84 @@ export class SMTPUtil {
     });
   }
 
-  async sendMail(mailOptions): Promise<void> {
+  private createSmtpTransporter(): nodemailer.Transporter {
+    const host = this.configService.get<string>('SMTP_HOST') || 'localhost';
+    const port = Number(this.configService.get<string>('SMTP_PORT')) || 1025;
+    const user = this.configService.get<string>('SMTP_LOGIN') || '';
+    const pass = this.configService.get<string>('SMTP_PASS') || '';
+    const secure =
+      this.configService.get<string>('SMTP_SECURE') === 'true' ||
+      this.configService.get<string>('SMTP_SECURE') === '1';
+
+    const auth = user && pass ? { user, pass } : undefined;
+
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth,
+      tls: {
+        rejectUnauthorized: true,
+      },
+    });
+  }
+
+  async sendMail(mailOptions: nodemailer.SendMailOptions): Promise<void> {
     try {
       if (!this.gmailTransporter) {
         this.gmailTransporter = await this.createGmailTransporter();
       }
       await this.gmailTransporter.sendMail(mailOptions);
-      console.log('✅ Email envoyé avec Gmail');
+      console.log('Email sent with Gmail');
+      return;
     } catch (err) {
-      console.warn('⚠️ Gmail a échoué, fallback vers MailHog');
-      try {
-        await this.mailhogTransporter.sendMail(mailOptions);
-        console.log('✅ Email envoyé avec MailHog');
-      } catch (mailhogError) {
-        console.error('❌ MailHog a aussi échoué :', mailhogError.message);
-        throw mailhogError;
+      const e = err as any;
+      console.error('Gmail error details:', {
+        message: e?.message,
+        code: e?.code,
+        response: e?.response,
+        responseCode: e?.responseCode,
+        stack: e?.stack,
+      });
+      console.warn('Gmail failed, fallback to SMTP');
+    }
+
+    try {
+      if (!this.smtpTransporter) {
+        this.smtpTransporter = this.createSmtpTransporter();
       }
+      await this.smtpTransporter.sendMail(mailOptions);
+      console.log('Email sent with SMTP');
+      return;
+    } catch (smtpError) {
+      const e = smtpError as any;
+      console.error('SMTP error details:', {
+        message: e?.message,
+        code: e?.code,
+        response: e?.response,
+        responseCode: e?.responseCode,
+        stack: e?.stack,
+      });
+      console.warn('SMTP failed, fallback to MailHog');
+    }
+
+    try {
+      await this.mailhogTransporter.sendMail(mailOptions);
+      console.log('Email sent with MailHog');
+    } catch (mailhogError) {
+      console.error('MailHog failed:', mailhogError.message);
+      throw mailhogError;
     }
   }
+
+  async sendMailGmailOnly(mailOptions: nodemailer.SendMailOptions): Promise<void> {
+    if (!this.gmailTransporter) {
+      this.gmailTransporter = await this.createGmailTransporter();
+    }
+    await this.gmailTransporter.sendMail(mailOptions);
+    console.log('Email sent with Gmail (no fallback)');
+  }
+
   CreateMail(
     to: string,
     subject: string,
