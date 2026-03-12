@@ -1,0 +1,22 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          RENDER_IMAGE_URL: ${{ secrets.RENDER_IMAGE_URL }}
+        run: |
+          if [ -n "${RENDER_IMAGE_URL}" ]; then
+            curl -X POST "${RENDER_DEPLOY_HOOK}?imgURL=${RENDER_IMAGE_URL}"
+          else
+            curl -X POST "${RENDER_DEPLOY_HOOK}"
+          fi
