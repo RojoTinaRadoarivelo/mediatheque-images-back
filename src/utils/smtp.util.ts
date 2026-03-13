@@ -8,6 +8,7 @@ import { Injectable } from '@nestjs/common';
 export class SMTPUtil {
   // Gmail OAuth2 disabled (Proton Mail used via SMTP)
   // private gmailTransporter: nodemailer.Transporter;
+  private brevoTransporter: nodemailer.Transporter;
   private smtpTransporter: nodemailer.Transporter;
   private readonly mailhogTransporter: nodemailer.Transporter;
 
@@ -84,6 +85,28 @@ export class SMTPUtil {
     });
   }
 
+  private createBrevoTransporter(): nodemailer.Transporter {
+    const host = this.configService.get<string>('BREVO_SMTP_HOST') || 'smtp-relay.brevo.com';
+    const port = Number(this.configService.get<string>('BREVO_SMTP_PORT')) || 587;
+    const user = this.configService.get<string>('BREVO_SMTP_LOGIN') || '';
+    const pass = this.configService.get<string>('BREVO_SMTP_PASS') || '';
+    const secure =
+      this.configService.get<string>('BREVO_SMTP_SECURE') === 'true' ||
+      this.configService.get<string>('BREVO_SMTP_SECURE') === '1';
+
+    const auth = user && pass ? { user, pass } : undefined;
+
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth,
+      tls: {
+        rejectUnauthorized: true,
+      },
+    });
+  }
+
   async sendMail(mailOptions: nodemailer.SendMailOptions): Promise<void> {
     const provider = this.getProvider();
     if (provider === 'smtp') {
@@ -95,14 +118,35 @@ export class SMTPUtil {
       return;
     }
 
-    // Gmail OAuth2 disabled: fallback goes directly to SMTP then MailHog
+    // Gmail OAuth2 disabled: fallback goes directly to Brevo, then Resend (SMTP), then MailHog
+
+    try {
+      if (!this.brevoTransporter) {
+        this.brevoTransporter = this.createBrevoTransporter();
+      }
+      // Override from address for Brevo
+      const brevoMailOptions = {
+        ...mailOptions,
+        from: this.configService.get<string>('BREVO_SMTP_FROM') || mailOptions.from,
+      };
+      await this.brevoTransporter.sendMail(brevoMailOptions);
+      console.log('Email sent with Brevo');
+      return;
+    } catch (brevoError) {
+      const e = brevoError as any;
+      console.error('Brevo error details:', {
+        message: e?.message,
+        code: e?.code,
+      });
+      console.warn('Brevo failed, fallback to Resend (SMTP)');
+    }
 
     try {
       if (!this.smtpTransporter) {
         this.smtpTransporter = this.createSmtpTransporter();
       }
       await this.smtpTransporter.sendMail(mailOptions);
-      console.log('Email sent with SMTP');
+      console.log('Email sent with Resend (SMTP)');
       return;
     } catch (smtpError) {
       const e = smtpError as any;
