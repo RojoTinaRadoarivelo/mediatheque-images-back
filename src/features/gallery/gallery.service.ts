@@ -8,6 +8,7 @@ import { assertSingle } from '../../utils/interfaces/assert-single.utils';
 import { DEFAULT_ERROR_MSG, PHOTO_ERROR_MESSAGE } from '../../auth/interfaces/error-messages';
 import { Galleries } from './gallery.type';
 import { RemoveFile } from '../../utils/files.util';
+import { getLimitSize, getPageIndex, MAX_LIMIT_SIZE } from '../../core/configs/interfaces/pagination.utils';
 
 @Injectable()
 export class GalleryService {
@@ -53,22 +54,47 @@ export class GalleryService {
         this.tagPrisma = _dbService.prisma.tags;
     }
 
-    async getAllPhoto(page: number, limit: number) {
-        const skip = page ? (page - 1) * limit : 0;
-        const photoFiltered = await this.galleryPrisma.findMany({
-            take: limit,
-            skip,
-            select: this.selectFields,
+    async getAllPhoto(page?: number, limit?: number): Promise<IResponse<Galleries[]>> {
+        const paginationDefault = getPageIndex(page);
+        const limitDefault = limit ?? MAX_LIMIT_SIZE;
+        const skip = getLimitSize(paginationDefault, limitDefault);
+
+        const photoIds = await this.galleryPrisma.groupBy({
+            by: ["photo_id"],
             orderBy: {
-                createdAt: "desc"
-            }
+                photo_id: "desc"
+            },
+            skip,
+            take: limit
         });
+
+        const ids = photoIds.map((p: any) => p.photo_id);
+
+        if (ids.length === 0) {
+            return {
+                message: "List of photos!",
+                data: [],
+                statusCode: 200
+            };
+        }
+
+        // 2️⃣ récupérer toutes les données
+        const photoFiltered = await this.galleryPrisma.findMany({
+            where: {
+                photo_id: { in: ids }
+            },
+            select: this.selectFields
+        });
+
+        // 3️⃣ groupement
         const groupedMap = new Map<string, any>();
 
         for (const element of photoFiltered) {
+
             const photoId = element.photo.id;
 
             if (!groupedMap.has(photoId)) {
+
                 groupedMap.set(photoId, {
                     photo: element.photo,
                     user: element.user,
@@ -76,11 +102,11 @@ export class GalleryService {
                     createdAt: element.createdAt,
                     updatedAt: element.updatedAt,
                 });
+
             }
 
             const group = groupedMap.get(photoId);
 
-            // push tag uniquement
             if (
                 element.tag &&
                 !group.tag.some((t: any) => t.name === element.tag.name)
@@ -88,20 +114,26 @@ export class GalleryService {
                 group.tag.push(element.tag);
             }
         }
-
         // Map → Array
         const groupedBy = Array.from(groupedMap.values());
+        const total = await this.photoPrisma.count({});
+        const totalPages = limitDefault ? Math.ceil(total / limitDefault) : total;
 
         const shuffled = groupedBy.sort(() => Math.random() - 0.5);
         return {
             message: 'List of photos!',
             data: shuffled ?? [],
+            page,
+            total,
+            totalPages,
             statusCode: 200
         };
     }
 
-    async getFilteredPhoto(query: any, page: number, limit: number) {
-        const skip = page ? (page - 1) * limit : 0;
+    async getFilteredPhoto(query: any, page?: number, limit?: number): Promise<IResponse<Galleries[]>> {
+        const paginationDefault = getPageIndex(page);
+        const limitDefault = limit ?? MAX_LIMIT_SIZE;
+        const skip = getLimitSize(paginationDefault, limitDefault);
         const { name, title, tagNames, userName, userId, isAuthentified, tagMode } = query;
 
         // Construire les conditions uniquement si elles existent
@@ -243,44 +275,56 @@ export class GalleryService {
             whereCondition = {};
         }
 
-        const photoFiltered = await this.galleryPrisma.findMany({
-            take: limit,
-            skip,
+        const photoIds = await this.galleryPrisma.groupBy({
+            by: ["photo_id"],
             where: whereCondition,
-            select: this.selectFields,
             orderBy: {
-                createdAt: "desc"
-            }
+                photo_id: "desc"
+            },
+            skip,
+            take: limitDefault
         });
 
+        const ids = photoIds.map((p: any) => p.photo_id);
 
-        // grouping result
+        if (ids.length === 0) {
+            return {
+                message: "List of filtered photos!",
+                data: [],
+                statusCode: 200
+            };
+        }
+
+        // 2️⃣ récupérer toutes les données
+        const photoFiltered = await this.galleryPrisma.findMany({
+            where: {
+                photo_id: { in: ids },
+                ...whereCondition
+            },
+            select: this.selectFields
+        });
+
+        // 3️⃣ regroupement
         const groupedMap = new Map<string, any>();
-        let groupName: string = '';
-
 
         for (const element of photoFiltered) {
-            const photoId = element.photo.id;
-            if (userId && isAuthentified) {
-                const userId = element.user.id;
-                groupName = `${photoId}_${userId}`;
-            } else {
-                groupName = photoId;
-            }
 
-            if (!groupedMap.has(groupName)) {
-                groupedMap.set(groupName, {
+            const photoId = element.photo.id;
+
+            if (!groupedMap.has(photoId)) {
+
+                groupedMap.set(photoId, {
                     photo: element.photo,
                     user: element.user,
                     tag: [],
                     createdAt: element.createdAt,
                     updatedAt: element.updatedAt,
                 });
+
             }
 
-            const group = groupedMap.get(groupName);
+            const group = groupedMap.get(photoId);
 
-            // push tag uniquement
             if (
                 element.tag &&
                 !group.tag.some((t: any) => t.name === element.tag.name)
@@ -291,12 +335,24 @@ export class GalleryService {
 
         // Map → Array
         const groupedBy = Array.from(groupedMap.values());
+        
+        const totalResult = await this.galleryPrisma.groupBy({
+            by: ["photo_id"],
+            where: whereCondition,
+            _count: { photo_id: true }
+        });
+        const total = totalResult.length;
+
+        const totalPages = limitDefault ? Math.ceil(total / limitDefault) : total;
 
         const shuffled = groupedBy.sort(() => Math.random() - 0.5);
 
         return {
             message: 'List of filtered photos!',
             data: shuffled ?? [],
+            page,
+            total,
+            totalPages,
             statusCode: 200
         };
     }

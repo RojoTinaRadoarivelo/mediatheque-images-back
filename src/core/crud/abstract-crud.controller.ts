@@ -68,17 +68,19 @@ export abstract class CrudController<C, U, R> {
 
     @ApiMessage(`search`)
     @Post('search')
-    searchMany(@Body() data: Partial<R>, @Query('page') page = 1, @Query('limit') limit = 12) {
-
-        return this.service.Search(data, +page, +limit);
+    searchMany(@Body() data: Partial<R>, @Query('page') page?: number, @Query('limit') limit?: number) {
+        let pageIndex = Number(page) || undefined;
+        let limitOrSize = Number(limit) || undefined;
+        return pageIndex && limitOrSize ? this.service.Search(data, pageIndex, limitOrSize) : this.service.Search(data);
 
     }
 
     @ApiMessage(`list`)
     @Get()
-    findMany(@Query('page') page: number, @Query('limit') limit: number = 12) {
-
-        return this.service.FindMany(+page, +limit);
+    findMany(@Query('page') page?: number, @Query('limit') limit?: number) {
+        let pageIndex = Number(page) || undefined;
+        let limitOrSize = Number(limit) || undefined;
+        return pageIndex && limitOrSize ? this.service.FindMany(pageIndex, limitOrSize) : this.service.FindMany();
 
     }
 }

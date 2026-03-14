@@ -52,6 +52,9 @@ export class ApiMessageInterceptor implements NestInterceptor {
                     statusCode: response.statusCode ?? 200,
                     message: response.message || messageMap[action],
                     data: response.data || null,
+                    ...(response.page !== undefined && { page: response.page }),
+                    ...(response.total !== undefined && { total: response.total }),
+                    ...(response.totalPages !== undefined && { totalPages: response.totalPages }),
                 };
             }),
         );

@@ -16,13 +16,17 @@ export class GalleryController {
 
   // list of photos
   @Get('photos')
-  async ListPhoto(@Query('page') page = 1, @Query('limit') limit = 12): Promise<IResponse<Galleries[]>> {
-    return await this.galleryService.getAllPhoto(+page, +limit);
+  async ListPhoto(@Query('page') page?: number, @Query('limit') limit?: number): Promise<IResponse<Galleries[]>> {
+    let pageIndex = Number(page) || undefined;
+    let limitOrSize = Number(limit) || undefined;
+    return pageIndex && limitOrSize ? await this.galleryService.getAllPhoto(pageIndex, limitOrSize) : await this.galleryService.getAllPhoto();
   }
   // filters of photos
   @Post('photos-filtered')
-  async ListFilteredPhoto(@Query('page') page = 1, @Query('limit') limit = 12, @Body() query: any): Promise<IResponse<Galleries[]>> {
-    return await this.galleryService.getFilteredPhoto(query, +page, +limit);
+  async ListFilteredPhoto(@Body() query: any, @Query('page') page?: number, @Query('limit') limit?: number): Promise<IResponse<Galleries[]>> {
+    let pageIndex = Number(page) || undefined;
+    let limitOrSize = Number(limit) || undefined;
+    return pageIndex && limitOrSize ? await this.galleryService.getFilteredPhoto(query, pageIndex, limitOrSize) : await this.galleryService.getFilteredPhoto(query);
   }
   // create photo with tag and user (photograph)
   @UseInterceptors(

@@ -3,6 +3,7 @@ import { CrudRepository } from '../../../crud/abstract.crud.repository';
 import { IPrismaService } from './prisma.service';
 import { response } from 'express';
 import { IResponse } from '../../../../shared/interfaces/responses.interfaces';
+import { getLimitSize, getPageIndex, MAX_LIMIT_SIZE } from '../pagination.utils';
 
 @Injectable()
 export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma'], C, U, R>
@@ -172,49 +173,48 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
     async FindMany(returnObjectParams: any, query?: any, pageIndex?: number, pagination?: number): Promise<IResponse<R[]>> {
         let response: IResponse<R[]>;
         try {
-            const paginationDefault: number = pagination ?? 10;
-            const skip = pageIndex ? paginationDefault * (pageIndex - 1) : 0;
+            const page = getPageIndex(pageIndex);
+            const limit = pagination ?? MAX_LIMIT_SIZE;
+            const skip = getLimitSize(page, limit);
+
+            const whereCondition = query ?? {};
+
             let responseData: R[] = [];
             if (pageIndex && pagination) {
-                if (query) {
-                    responseData = await this.prismaModel.findMany({
-                        where: query,
-                        select: returnObjectParams,
-                        take: paginationDefault,
-                        skip,
-                        orderBy: {
-                            createdAt: "desc"
-                        }
-                    });
-                }
                 responseData = await this.prismaModel.findMany({
+                    where: whereCondition,
                     select: returnObjectParams,
-                    take: paginationDefault,
+                    take: limit,
                     skip,
                     orderBy: {
                         createdAt: "desc"
                     }
                 });
-            }
-            if (query) {
+            } else {
                 responseData = await this.prismaModel.findMany({
-                    where: query,
+                    where: whereCondition,
                     select: returnObjectParams,
                     orderBy: {
                         createdAt: "desc"
                     }
                 });
             }
-            responseData = await this.prismaModel.findMany({
-                select: returnObjectParams,
-                orderBy: {
-                    createdAt: "desc"
-                }
+            // count total items
+            const total = await this.prismaModel.count({
+                where: whereCondition
             });
+
+            const totalPages = pagination ? Math.ceil(total / pagination) : total;
+
+
             response = {
                 statusCode: HttpStatus.OK,
                 data: responseData,
+                page: pageIndex,
+                total,
+                totalPages
             };
+
             return response;
         } catch (error) {
             if (error instanceof BadRequestException) {
@@ -321,25 +321,46 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
         }
     }
 
-    async Search(filter: Partial<R>, includeParams: any): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
+    async Search(filter: Partial<R>, includeParams: any, pageIndex?: number, pagination?: number): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
         let response: IResponse<R[] | (Awaited<R> | null)[]>;
         try {
-            const responseData = await this.prismaModel.findMany({
-                where: filter,
-                select: includeParams,
-            });
+            const page = getPageIndex(pageIndex);
+            const limit = pagination ?? MAX_LIMIT_SIZE;
+            const skip = getLimitSize(page, limit);
+
+            let responseData: R[];
+            if (pageIndex && pagination) {
+                responseData = await this.prismaModel.findMany({
+                    where: filter,
+                    select: includeParams,
+                    take: limit,
+                    skip,
+                    orderBy: { createdAt: 'desc' },
+                });
+            } else {
+                responseData = await this.prismaModel.findMany({
+                    where: filter,
+                    select: includeParams,
+                    orderBy: { createdAt: 'desc' },
+                });
+            }
+
+            const total = await this.prismaModel.count({ where: filter });
+            const totalPages = pagination ? Math.ceil(total / pagination) : total;
+
             response = {
                 statusCode: HttpStatus.OK,
                 data: responseData,
+                page: pageIndex,
+                total,
+                totalPages,
             };
             return response;
         } catch (error) {
-            // console.log(error);
             return {
                 statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: error.message,
             };
-
         }
     }
 
