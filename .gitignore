@@ -1,6 +1,6 @@
 # compiled output
 /dist
-/prisma
+/prisma/schema/migrations
 /node_modules
 /build
 /uploads
