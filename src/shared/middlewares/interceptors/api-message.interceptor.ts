@@ -33,7 +33,8 @@ export class ApiMessageInterceptor implements NestInterceptor {
             createMany: `${controllerName} were created successfully`,
             updateMany: `${controllerName} were updated successfully`,
             deleteMany: `${controllerName} were deleted successfully`,
-            search: `List of ${controllerName} for the query`
+            search: `List of ${controllerName} for the query`,
+            bin: `${controllerName} was moved to bin successfully`
         }
 
         return next.handle().pipe(
@@ -51,6 +52,9 @@ export class ApiMessageInterceptor implements NestInterceptor {
                     statusCode: response.statusCode ?? 200,
                     message: response.message || messageMap[action],
                     data: response.data || null,
+                    ...(response.page !== undefined && { page: response.page }),
+                    ...(response.total !== undefined && { total: response.total }),
+                    ...(response.totalPages !== undefined && { totalPages: response.totalPages }),
                 };
             }),
         );

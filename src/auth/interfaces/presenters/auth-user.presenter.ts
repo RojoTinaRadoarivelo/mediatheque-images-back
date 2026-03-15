@@ -11,11 +11,13 @@ export class AuthUserPresenter implements Presenter<Users, SignedUserDto> {
     let response: SignedUserDto | null;
 
     if (data instanceof Users || verifyObject<Users>(data, Users)) {
+      const preferences = data.preference ? { id: data.preference.id, ...data.preference?.preferences } : null;
       response = {
         id: data.id,
         email: data.email,
         avatar: data.avatar ?? '',
         userName: data.userName ?? '',
+        preference: preferences
       };
     } else {
       response = null;

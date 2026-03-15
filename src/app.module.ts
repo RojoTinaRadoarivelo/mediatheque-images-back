@@ -12,6 +12,12 @@ import { CONFIG } from './core/configs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './features/users/users.module';
 import { TagsModule } from './features/tags/tags.module';
+import { GalleryModule } from './features/gallery/gallery.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { UserPreferencesModule } from './features/user-preferences/user-preferences.module';
+
+const globalPrefix = process.env.GLOBAL_PREFIX;
 
 @Module({
   imports: [
@@ -34,9 +40,15 @@ import { TagsModule } from './features/tags/tags.module';
         ],
       }),
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: `/${globalPrefix}/uploads`,
+    }),
     AuthModule,
     UsersModule,
-    TagsModule
+    TagsModule,
+    GalleryModule,
+    UserPreferencesModule
   ],
   controllers: [AppController],
   providers: [

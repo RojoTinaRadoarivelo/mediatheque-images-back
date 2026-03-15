@@ -38,20 +38,29 @@ export abstract class CrudService<C, U, R> implements ICrudService<C, U, R> {
     }
     async FindMany(pagination?: number, step?: number): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
         const includeParams = this.includeParams ?? this.listFilterIncludeParams;
-        return await this.repository.FindMany(includeParams);
+        return await this.repository.FindMany(includeParams, null, pagination, step);
     }
     async DeleteMany(ids: string[], query?: any): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
         const includeParams = this.listFilterIncludeParams ?? this.includeParams;
         return await this.repository.DeleteMany(ids, includeParams, query);
     }
 
-    async Search(filter: Partial<R>): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
+    async Search(filter: Partial<R>, pagination?: number, step?: number): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
         const includeParams = this.listFilterIncludeParams ?? this.includeParams;
-        return await this.repository.FindMany(includeParams, filter);
+        return await this.repository.FindMany(includeParams, filter, pagination, step);
     }
 
     async FindOne(query?: any, include?: any): Promise<IResponse<R | null>> {
         const includeParams = include ?? this.listFilterIncludeParams;
         return await this.repository.FindOne(query, includeParams);
+    }
+
+    async MoveToBin(id: string | null, query?: any): Promise<IResponse<R | null>> {
+        const includeParams = this.deleteIncludeParams ?? this.includeParams;
+        return await this.repository.MoveToBin(id, includeParams, query);
+    }
+    async RestoreFromBinPhoto(id: string | null, query?: any): Promise<IResponse<R | null>> {
+        const includeParams = this.listFilterIncludeParams ?? this.includeParams;
+        return await this.repository.RestoreFromBinPhoto(id, includeParams, query);
     }
 } 

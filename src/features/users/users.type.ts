@@ -7,6 +7,7 @@ export class Users {
     createdAt: Date;
     avatar: string;
     userName: string;
+    preference: any;
 
 }
 
@@ -23,6 +24,7 @@ export const UsersOutputDto = {
 }
 
 export const CreatedUserOutputDto = {
+    id: true,
     email: true,
     userName: true,
     avatar: true,

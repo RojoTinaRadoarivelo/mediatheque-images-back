@@ -1,4 +1,4 @@
-import { Body, Get, Post, Put, Delete, Param, UsePipes } from '@nestjs/common';
+import { Body, Get, Post, Put, Delete, Param, UsePipes, Query } from '@nestjs/common';
 
 
 
@@ -20,8 +20,24 @@ export abstract class CrudController<C, U, R> {
     @Post()
     async create(@Body() data: C) {
         const dtoClass = this.getCreateDto();
-        const validated = await new GenericDtoValidatorPipe(dtoClass, ['create']).transform(data, { type: 'body' } as any);
+        const validated = await new GenericDtoValidatorPipe(dtoClass).transform(data, { type: 'body' } as any);
         return this.service.Create(validated as C);
+
+    }
+
+    @ApiMessage(`bin`)
+    @Put('moveToBin/:id')
+    moveToBin(@Param('id') id: string) {
+
+        return this.service.MoveToBin(id);
+
+    }
+
+    @ApiMessage(`bin`)
+    @Put('restoreFromBin/:id')
+    restoreFromBin(@Param('id') id: string) {
+
+        return this.service.RestoreFromBinPhoto(id);
 
     }
 
@@ -29,7 +45,7 @@ export abstract class CrudController<C, U, R> {
     @Put(':id')
     async update(@Param('id') id: string, @Body() data: U) {
         const dtoClass = this.getUpdateDto();
-        const validated = await new GenericDtoValidatorPipe(dtoClass, ['update']).transform(data, { type: 'body' } as any);
+        const validated = await new GenericDtoValidatorPipe(dtoClass).transform(data, { type: 'body' } as any);
         return this.service.Update(id, validated as U);
 
     }
@@ -42,11 +58,29 @@ export abstract class CrudController<C, U, R> {
 
     }
 
+    @ApiMessage(`search`)
+    @Get(':id')
+    findOne(@Param('id') id: string) {
+
+        return this.service.FindOne({ id });
+
+    }
+
+    @ApiMessage(`search`)
+    @Post('search')
+    searchMany(@Body() data: Partial<R>, @Query('page') page?: number, @Query('limit') limit?: number) {
+        let pageIndex = Number(page) || undefined;
+        let limitOrSize = Number(limit) || undefined;
+        return pageIndex && limitOrSize ? this.service.Search(data, pageIndex, limitOrSize) : this.service.Search(data);
+
+    }
+
     @ApiMessage(`list`)
     @Get()
-    findMany() {
-
-        return this.service.FindMany();
+    findMany(@Query('page') page?: number, @Query('limit') limit?: number) {
+        let pageIndex = Number(page) || undefined;
+        let limitOrSize = Number(limit) || undefined;
+        return pageIndex && limitOrSize ? this.service.FindMany(pageIndex, limitOrSize) : this.service.FindMany();
 
     }
 }

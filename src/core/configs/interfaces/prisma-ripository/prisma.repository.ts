@@ -3,6 +3,7 @@ import { CrudRepository } from '../../../crud/abstract.crud.repository';
 import { IPrismaService } from './prisma.service';
 import { response } from 'express';
 import { IResponse } from '../../../../shared/interfaces/responses.interfaces';
+import { getLimitSize, getPageIndex, MAX_LIMIT_SIZE } from '../pagination.utils';
 
 @Injectable()
 export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma'], C, U, R>
@@ -99,7 +100,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                     throw new BadRequestException('There was an error deleting the data!');
                 }
                 response = {
-                    statusCode: HttpStatus.CREATED,
+                    statusCode: HttpStatus.OK,
                     data: responseData,
                 };
                 return response;
@@ -109,7 +110,7 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
                 throw new BadRequestException('There was an error deleting the data!');
             }
             response = {
-                statusCode: HttpStatus.CREATED,
+                statusCode: HttpStatus.OK,
                 data: responseData,
             };
             return response;
@@ -172,39 +173,48 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
     async FindMany(returnObjectParams: any, query?: any, pageIndex?: number, pagination?: number): Promise<IResponse<R[]>> {
         let response: IResponse<R[]>;
         try {
-            const paginationDefault: number = pagination ?? 10;
-            const skip = pageIndex ? paginationDefault * pageIndex : 0;
+            const page = getPageIndex(pageIndex);
+            const limit = pagination ?? MAX_LIMIT_SIZE;
+            const skip = getLimitSize(page, limit);
+
+            const whereCondition = query ?? {};
+
             let responseData: R[] = [];
-            if (skip) {
-                if (query) {
-                    responseData = await this.prismaModel.findMany({
-                        where: query,
-                        select: returnObjectParams,
-                        take: paginationDefault,
-                        skip,
-                    });
-                }
+            if (pageIndex && pagination) {
                 responseData = await this.prismaModel.findMany({
-                    where: {},
+                    where: whereCondition,
                     select: returnObjectParams,
-                    take: paginationDefault,
+                    take: limit,
                     skip,
+                    orderBy: {
+                        createdAt: "desc"
+                    }
                 });
-            }
-            if (query) {
+            } else {
                 responseData = await this.prismaModel.findMany({
-                    where: query,
-                    select: returnObjectParams
+                    where: whereCondition,
+                    select: returnObjectParams,
+                    orderBy: {
+                        createdAt: "desc"
+                    }
                 });
             }
-            responseData = await this.prismaModel.findMany({
-                where: {},
-                select: returnObjectParams
+            // count total items
+            const total = await this.prismaModel.count({
+                where: whereCondition
             });
+
+            const totalPages = pagination ? Math.ceil(total / pagination) : total;
+
+
             response = {
                 statusCode: HttpStatus.OK,
                 data: responseData,
+                page: pageIndex,
+                total,
+                totalPages
             };
+
             return response;
         } catch (error) {
             if (error instanceof BadRequestException) {
@@ -311,25 +321,124 @@ export class PrismaCrudRepository<ModelName extends keyof IPrismaService['prisma
         }
     }
 
-    async Search(filter: Partial<R>, includeParams: any): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
+    async Search(filter: Partial<R>, includeParams: any, pageIndex?: number, pagination?: number): Promise<IResponse<R[] | (Awaited<R> | null)[]>> {
         let response: IResponse<R[] | (Awaited<R> | null)[]>;
         try {
-            const responseData = await this.prismaModel.findMany({
-                where: filter,
-                select: includeParams,
-            });
+            const page = getPageIndex(pageIndex);
+            const limit = pagination ?? MAX_LIMIT_SIZE;
+            const skip = getLimitSize(page, limit);
+
+            let responseData: R[];
+            if (pageIndex && pagination) {
+                responseData = await this.prismaModel.findMany({
+                    where: filter,
+                    select: includeParams,
+                    take: limit,
+                    skip,
+                    orderBy: { createdAt: 'desc' },
+                });
+            } else {
+                responseData = await this.prismaModel.findMany({
+                    where: filter,
+                    select: includeParams,
+                    orderBy: { createdAt: 'desc' },
+                });
+            }
+
+            const total = await this.prismaModel.count({ where: filter });
+            const totalPages = pagination ? Math.ceil(total / pagination) : total;
+
+            response = {
+                statusCode: HttpStatus.OK,
+                data: responseData,
+                page: pageIndex,
+                total,
+                totalPages,
+            };
+            return response;
+        } catch (error) {
+            return {
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: error.message,
+            };
+        }
+    }
+
+    async MoveToBin(id: string | null, returnObjectParams: any, query?: any): Promise<IResponse<R | null>> {
+        let response: IResponse<R | null>;
+        try {
+            if (id == null) {
+                const responseData = await this.prismaModel.update({ where: query, data: { isDeleted: true }, select: returnObjectParams });
+                if (!responseData) {
+                    throw new BadRequestException('There was an error moving the data into bin!');
+                }
+                response = {
+                    statusCode: HttpStatus.OK,
+                    data: responseData,
+                };
+                return response;
+            }
+            const responseData = await this.prismaModel.update({ where: { id }, data: { isDeleted: true }, select: returnObjectParams });
+            if (!responseData) {
+                throw new BadRequestException('There was an error moving the data into bin!');
+            }
             response = {
                 statusCode: HttpStatus.OK,
                 data: responseData,
             };
             return response;
         } catch (error) {
-            // console.log(error);
-            return {
-                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                message: error.message,
-            };
+            if (error instanceof BadRequestException) {
+                response = {
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: error.message,
+                };
+            } else {
+                response = {
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: error.message,
+                };
+            }
+            return response;
+        }
+    }
 
+    async RestoreFromBinPhoto(id: string | null, returnObjectParams: any, query?: any): Promise<IResponse<R | null>> {
+        let response: IResponse<R | null>;
+        try {
+            if (id == null) {
+                const responseData = await this.prismaModel.update({ where: query, data: { isDeleted: false }, select: returnObjectParams });
+                if (!responseData) {
+                    throw new BadRequestException('There was an error restoring the data frmo bin!');
+                }
+                response = {
+                    statusCode: HttpStatus.OK,
+                    data: responseData,
+                };
+                return response;
+            }
+            const responseData = await this.prismaModel.update({ where: { id }, data: { isDeleted: false }, select: returnObjectParams });
+            if (!responseData) {
+                throw new BadRequestException('There was an error restoring the data frmo bin!');
+            }
+            response = {
+                statusCode: HttpStatus.OK,
+                data: responseData,
+            };
+            return response;
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                response = {
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: error.message,
+                };
+            } else {
+                response = {
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    message: error.message,
+                };
+            }
+            return response;
         }
     }
 } 
